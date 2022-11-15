@@ -1,6 +1,6 @@
 import argparse
 
-from ch2finder import Chi2Finder
+from chi2finder import Chi2Finder
 
 from framework import FrameWork
 
