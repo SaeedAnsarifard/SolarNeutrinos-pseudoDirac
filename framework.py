@@ -28,7 +28,7 @@ class FrameWork(object):
         #Electron density inside sun 10^{23}/cm^{3}
         self.n_e  = 6*10**load_phi[2,:]
         #Neutrino energy spectrum : http://www.sns.ias.edu/~jnb/
-        spectrumB8      = np.loadtxt('8B_Spectrum.txt')
+        spectrumB8      = np.loadtxt('./Data/8B_Spectrum.txt')
         spectrumB8[:,1] = spectrumB8[:,1]/np.trapz(spectrumB8[:,1],spectrumB8[:,0])
         spectrumpp      = np.loadtxt('ppenergytab1.txt')
         self.spec       = {'pp' : spectrumpp[:,1],
