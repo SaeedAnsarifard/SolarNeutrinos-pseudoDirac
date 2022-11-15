@@ -41,7 +41,7 @@ class FrameWork(object):
                            'pep': np.array([1.44])       ,
                            'B8' : spectrumB8[:,0]        }
         #electron recoil energy in Mev
-        self.T   = {'pp' : self.E['pp'] /(1 + self.me /(2 * self.E['pp'])),
+        self.T   = {'pp' : self.E['pp'] /(1 + self.m_e /(2 * self.E['pp'])),
                     'Be7': np.linspace(0.05,self.E['Be7']/(1+self.me/(2*self.E['Be7'])),100),
                     'pep': np.linspace(0.05,self.E['pep'][0]/(1+self.me/(2*self.E['pep'][0])),100),
                     'B8' : self.E['B8'] /(1 + self.me /(2 * self.E['B8']))}
@@ -56,24 +56,24 @@ class FrameWork(object):
         #Borexino : per 100 ton :  3.307 \times 10^{31} 
         #Super-K  : per Kton    :  (10/18) \times 10^{6}/m_p
         self.det_Bo = 0.03307              
-        self.det_Su = (10/18) * 1/self.mp
+        self.det_Su = (10/18) * 1/self.m_p
         #event per day  : 24 \times 60 \times 60 
         self.time   = 24.*6.*6.     
         self.L,self.a,self.theta,self.H   = Sun_Earth_distance()
         self.year  = 60*60*24*365.25
 		#electron recoil cross section
         G        = self.hbarc * self.GF
-        self.CS  = {'e' : {'pp' : [dCS(G,self.me,self.E['pp'][i:],t,1) for i,t in enumerate (self.T['pp'])], 
-                           'Be7': [dCS(G,self.me,self.E['Be7'][i],self.T['Be7'][:,i],1) for i in range(2)],  
-                           'pep': dCS(G,self.me,self.E['pep'][0],self.T['pep'],1),
-                           'B8' : [dCS(G,self.me,self.E['B8'][i:],t,1) for i,t in enumerate (self.T['B8'])]}, 
-                    'mu/tau' : {'pp' : [dCS(G,self.me,self.E['pp'][i:],t,-1) for i,t in enumerate (self.T['pp'])], 
-                                'Be7': [dCS(G,self.me,self.E['Be7'][i],self.T['Be7'][:,i],-1) for i in range(2)],  
-                                'pep': dCS(G,self.me,self.E['pep'][0],self.T['pep'],-1),
-                                'B8' : [dCS(G,self.me,self.E['B8'][i:],t,-1) for i,t in enumerate (self.T['B8'])]}}
+        self.CS  = {'e' : {'pp' : [dCS(G,self.m_e,self.E['pp'][i:],t,1) for i,t in enumerate (self.T['pp'])], 
+                           'Be7': [dCS(G,self.m_e,self.E['Be7'][i],self.T['Be7'][:,i],1) for i in range(2)],  
+                           'pep': dCS(G,self.m_e,self.E['pep'][0],self.T['pep'],1),
+                           'B8' : [dCS(G,self.m_e,self.E['B8'][i:],t,1) for i,t in enumerate (self.T['B8'])]}, 
+                    'mu/tau' : {'pp' : [dCS(G,self.m_e,self.E['pp'][i:],t,-1) for i,t in enumerate (self.T['pp'])], 
+                                'Be7': [dCS(G,self.m_e,self.E['Be7'][i],self.T['Be7'][:,i],-1) for i in range(2)],  
+                                'pep': dCS(G,self.m_e,self.E['pep'][0],self.T['pep'],-1),
+                                'B8' : [dCS(G,self.m_e,self.E['B8'][i:],t,-1) for i,t in enumerate (self.T['B8'])]}}
         
 	    #Super-k detector response function   
-        self.res = Res_Su(self.Data_Su,self.T['B8'])
+        self.res = Res_Su(self.data_Su,self.T['B8'])
         
         self.t13  = 8.57
         self.mum3 = 0.
