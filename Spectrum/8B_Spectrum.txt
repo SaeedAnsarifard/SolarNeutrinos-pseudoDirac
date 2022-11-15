@@ -1,3 +1,4 @@
+#Neutrino production point weight function : http://www.sns.ias.edu/~jnb/
 #E       P_E         \Delta P
 0.10     0.214      0.020
 0.20     0.763      0.043
