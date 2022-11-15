@@ -8,11 +8,11 @@ class framework(object):
     #If M12_Nusiance='True' then M12 included as nusiance paramtere else it fixed to M12 value
     
     def __init__(self,Su_nbin=23, mumi = 'mum2', M12=7.54e-5, M12_Nusiance='True'):
-		if Su_nbin < 24 or Su_nbin < 1 :
-  			raise Exception("the nubmer of bins is wrong")
+	if Su_nbin < 24 or Su_nbin < 1 :
+  		raise Exception("the nubmer of bins is wrong")
 			
-		if mumi =! 'mum2' or mumi =! 'mum1' :
-  			raise Exception('maximal mass spliting name wrong')
+	if mumi =! 'mum2' or mumi =! 'mum1' :
+  		raise Exception('maximal mass spliting name wrong')
       
      
         #Fermi constant :  1.166 \times 10^{-11}/Mev^2
@@ -105,27 +105,30 @@ class framework(object):
         self.mum3 = 0.
         self.mumi = mumi
         
-        shape = np.loadtxt('./Correlated_Error/Nutrino_shape_Systematic_Uncertainties.txt')[:Su_nbin,:]        
-        scale = np.loadtxt('./Energy_Scale_Systematic_Uncertainties.txt')[:Su_nbin,:]
-        resol = np.loadtxt('./Energy_Resolution_Systematic_Uncertainties.txt')[:Su_nbin,:]
+        shape = np.loadtxt('./Correlated_Errors/Nutrino_shape_Systematic_Uncertainties.txt')[:Su_nbin,:]        
+        scale = np.loadtxt('./Correlated_Errors/Energy_Scale_Systematic_Uncertainties.txt')[:Su_nbin,:]
+        resol = np.loadtxt('./Correlated_Errors/Energy_Resolution_Systematic_Uncertainties.txt')[:Su_nbin,:]
 
         self.delta = np.random.normal(0,1,(500,3))
 
         self.f     = ((1/(1+self.delta[:,0,np.newaxis]*shape[:,1]/100))*
                       (1/(1+self.delta[:,1,np.newaxis]*scale[:,1]/100))*
                       (1/(1+self.delta[:,2,np.newaxis]*resol[:,1]/100)))
-
-        if M12_Nusiance:
-            self.M12 = 1e-5*np.random.normal(7.5,0.5,6)#1e-5*np.linspace(6.54,8.54,11)
+		
+		
+		#Base on KamLAND
+		self.M12_bar = 7.54e-5
+    	self.sig_M12 = 0.5e-5
+        if M12_Nusiance: 
+            self.M12     = np.linspace(self.M12_bar-(2*self.sig_M12),self.M12_bar+(2*self.sig_M12),7)
             
         else:
             self.M12 = np.array([M12])
+			
         self.Pred_Bo = np.zeros((self.M12.shape[0],3))
         self.Pred_Su = np.zeros((self.M12.shape[0],self.Data_Su.shape[0]))
          
     def __getitem__(self,param_ubdate):
-        #Pred_Bo = np.zeros((self.M12.shape[0],3))
-        #Pred_Su = np.zeros((self.M12.shape[0],self.Data_Su.shape[0]))
         param  = {'T12' : param_ubdate[0],
                   'T13' : self.T13, 
                   'mum1': 0. ,
@@ -156,7 +159,7 @@ class framework(object):
             self.Pred_Su[i]= 365.*(self.time/self.year)*self.det_Su*(self.a**2/self.H)*(self.norm['B8']*
                                                                                     RB8/self.Data_Su[:,-1])
             
-        return Chi2(self.Pred_Bo,self.Pred_Su,self.Data_Bo,self.Data_Su,self.f,self.delta,self.M12)
+        return Chi2(self.Pred_Bo,self.Pred_Su,self.Data_Bo,self.Data_Su,self.f,self.delta,self.M12,self.M12_bar,self.sig_M12)
 
 def Sun_Earth_distance(resolution=0.08):
     a     = (1.521e11 + 1.471e11)/2  #L = 1.5e11 meter 
@@ -267,10 +270,8 @@ def event_rate_maker(Pee,Pes,CS,E,T,L,spec,theta,Data_Su,Res):
     return Rpep,RBe7,Rpp,RB8
 
 
-def Chi2(pred_bo,pred_su,data_bo,data_su,f,delta,M12):
-    M12_bar = 7.54e-5
-    sig_M12 = 0.5e-5
-    
+def Chi2(pred_bo,pred_su,data_bo,data_su,f,delta,M12,M12_bar,sig_M12):
+	#Flux normalization uncertainties taking from solar standrad model predection  
     sig_norm_bo = np.array([0.01,0.06,0.01])
     sig_norm_su = 0.12
     
