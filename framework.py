@@ -8,7 +8,7 @@ class framework(object):
     #If M12_Nusiance='True' then M12 included as nusiance paramtere else it fixed to M12 value
     
     def __init__(self,Su_nbin=23, mumi = 'mum2', M12=7.54e-5, M12_Nusiance='True'):
-	if Su_nbin < 24 or Su_nbin < 1 :
+	if Su_nbin > 24 or Su_nbin < 1 :
   		raise Exception("the nubmer of bins is wrong")
 			
 	if mumi =! 'mum2' or mumi =! 'mum1' :
