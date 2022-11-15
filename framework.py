@@ -30,7 +30,7 @@ class FrameWork(object):
         #Neutrino energy spectrum : http://www.sns.ias.edu/~jnb/
         spectrumB8      = np.loadtxt('./Spectrum/8B_Spectrum.txt')
         spectrumB8[:,1] = spectrumB8[:,1]/np.trapz(spectrumB8[:,1],spectrumB8[:,0])
-        spectrumpp      = np.loadtxt('ppenergytab1.txt')
+        spectrumpp      = np.loadtxt('./Spectrum/ppenergytab1.txt')
         self.spec       = {'pp' : spectrumpp[:,1],
                            'Be7': np.array([1,1]),
                            'pep': np.array([1])  ,
