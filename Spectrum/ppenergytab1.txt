@@ -1,3 +1,4 @@
+#Neutrino energy spectrum : http://www.sns.ias.edu/~jnb/
 #E        P_E
 0.00504  0.00350
 0.01008  0.01380
