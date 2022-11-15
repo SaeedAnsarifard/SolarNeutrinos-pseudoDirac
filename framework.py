@@ -1,21 +1,19 @@
 import numpy as np
 
-class framework(object):
-
+class FrameWork(object):
     #Su_nbin is the number of Super-Kamiokande bins you need process. Max is 23
     #mumi is \Delta m_{i}^2 and has two options 'mum2' or 'mum1'
     #M12 is the mean value of \Delta m_{12}^2 
     #If M12_Nusiance='True' then M12 included as nusiance paramtere else it fixed to M12 value
-    def __init__(self,Su_nbin=23, mumi = 'mum2', M12=7.54e-5, M12_Nusiance='True'):
-
+    def __init__(self,Su_nbin=23, mumi = 'mum2', m12=7.54e-5, m12_nusiance='True'):
         #Fermi constant :  1.166 \times 10^{-11}/Mev^2
         self.GF    = 1.166
         #Electron mass : 0.511 Mev
-        self.me    = 0.511
+        self.m_e    = 0.511
         #h_{bar}c : 1.97 10^{-11} Mev.cm
         self.hbarc = 1.97
         #proton mass :  1.67 \times 10^{-27} kg
-        self.mp    = 1.67 
+        self.m_p    = 1.67 
         #Nutrino Flux normalization :    Arxiv : 1611.09867 
         self.norm  = {'pp' : 5.98,
                       'Be7': 4.93e-1,
@@ -28,7 +26,7 @@ class framework(object):
                       'pep': load_phi[11,:],
                       'B8' : load_phi[6,:]}
         #Electron density inside sun 10^{23}/cm^{3}
-        self.Ne  = 6*10**load_phi[2,:]
+        self.n_e  = 6*10**load_phi[2,:]
         #Neutrino energy spectrum : http://www.sns.ias.edu/~jnb/
         spectrumB8      = np.loadtxt('8B_Spectrum.txt')
         spectrumB8[:,1] = spectrumB8[:,1]/np.trapz(spectrumB8[:,1],spectrumB8[:,0])
@@ -49,11 +47,11 @@ class framework(object):
                     'B8' : self.E['B8'] /(1 + self.me /(2 * self.E['B8']))}
         #Borexino Data event (count per day per 100 ton) : https://doi.org/10.1038/s41586-018-0624-y 
         #Eur. Phys. J. C 80, 1091 (2020)
-        self.Data_Bo = {'pp' : {'R' : 134.,'e' : 20.},
+        self.data_Bo = {'pp' : {'R' : 134.,'e' : 20.},
                         'Be7': {'R' : 48.3,'e' : 1.8},
                         'pep': {'R' : 2.43,'e' : 0.58}}
         #Super-K Data event (count per year per  kilo ton) :
-        self.Data_Su  = np.loadtxt('./Data/B8_Data_2020.txt')[:Su_nbin,:]
+        self.data_Su  = np.loadtxt('./Data/B8_Data_2020.txt')[:Su_nbin,:]
         #detector normalization 
         #Borexino : per 100 ton :  3.307 \times 10^{31} 
         #Super-K  : per Kton    :  (10/18) \times 10^{6}/m_p
@@ -75,9 +73,9 @@ class framework(object):
                                 'B8' : [dCS(G,self.me,self.E['B8'][i:],t,-1) for i,t in enumerate (self.T['B8'])]}}
         
 	    #Super-k detector response function   
-        self.Res = Res_Su(self.Data_Su,self.T['B8'])
+        self.res = Res_Su(self.Data_Su,self.T['B8'])
         
-        self.T13  = 8.57
+        self.t13  = 8.57
         self.mum3 = 0.
         self.mumi = mumi
         
@@ -93,20 +91,20 @@ class framework(object):
 		
 		
 	    #Base on KamLAND
-        self.M12_bar  = 7.54e-5
-        self.sig_M12  = 5.0e-6
-        if M12_Nusiance:
-            self.M12 = np.linspace(self.M12_bar-(2*self.sig_M12),self.M12_bar+(2*self.sig_M12),7)
+        self.m12_bar  = 7.54e-5
+        self.sig_m12  = 5.0e-6
+        if m12_nusiance:
+            self.m12 = np.linspace(self.m12_bar-(2*self.sig_m12),self.m12_bar+(2*self.sig_m12),7)
             
         else:
-            self.M12 = np.array([M12])
+            self.m12 = np.array([m12])
 			
-        self.Pred_Bo = np.zeros((self.M12.shape[0],3))
-        self.Pred_Su = np.zeros((self.M12.shape[0],self.Data_Su.shape[0]))
+        self.pred_Bo = np.zeros((self.m12.shape[0],3))
+        self.pred_Su = np.zeros((self.m12.shape[0],self.data_Su.shape[0]))
          
     def __getitem__(self,param_ubdate):
         param  = {'T12' : param_ubdate[0],
-                  'T13' : self.T13, 
+                  'T13' : self.t13, 
                   'mum1': 0. ,
                   'mum2': 0. ,
                   'mum3': self.mum3,
@@ -114,28 +112,28 @@ class framework(object):
         param[self.mumi] = param_ubdate[1]
         
         for i in range(self.M12.shape[0]):
-            param['M12'] = self.M12[i]
+            param['M12'] = self.m12[i]
             
-            pep_Pee,pep_Pes=survival_probablity(self.phi['pep'],self.E['pep'],self.Ne,self.GF,self.hbarc,param,self.L)
-            Be7_Pee,Be7_Pes=survival_probablity(self.phi['Be7'],self.E['Be7'],self.Ne,self.GF,self.hbarc,param,self.L)
-            pp_Pee,pp_Pes  = survival_probablity(self.phi['pp'],self.E['pp'],self.Ne,self.GF,self.hbarc,param,self.L)
-            B8_Pee,B8_Pes  = survival_probablity(self.phi['B8'],self.E['B8'],self.Ne,self.GF,self.hbarc,param,self.L)
+            pep_Pee,pep_Pes=survival_probablity(self.phi['pep'],self.E['pep'],self.n_e,self.GF,self.hbarc,param,self.L)
+            Be7_Pee,Be7_Pes=survival_probablity(self.phi['Be7'],self.E['Be7'],self.n_e,self.GF,self.hbarc,param,self.L)
+            pp_Pee,pp_Pes  = survival_probablity(self.phi['pp'],self.E['pp'],self.n_e,self.GF,self.hbarc,param,self.L)
+            B8_Pee,B8_Pes  = survival_probablity(self.phi['B8'],self.E['B8'],self.n_e,self.GF,self.hbarc,param,self.L)
 
 
             Pee = {'pp' : pp_Pee, 'Be7' : Be7_Pee, 'pep' : pep_Pee, 'B8' : B8_Pee} 
             Pes = {'pp' : pp_Pes, 'Be7' : Be7_Pes, 'pep' : pep_Pes, 'B8' : B8_Pes} 
             Rpep,RBe7,Rpp,RB8 = event_rate_maker(Pee,Pes,self.CS,self.E,self.T,self.L,
-                                                 self.spec,self.theta,self.Data_Su,self.Res)
+                                                 self.spec,self.theta,self.data_Su,self.res)
 
 
 
-            self.Pred_Bo[i]=(self.time/self.year)*self.det_Bo* (self.a**2/self.H) * np.array([self.norm['pp']*Rpp,
+            self.pred_Bo[i]=(self.time/self.year)*self.det_Bo* (self.a**2/self.H) * np.array([self.norm['pp']*Rpp,
                                                                                               self.norm['Be7']*RBe7,
                                                                                               self.norm['pep']*Rpep])
-            self.Pred_Su[i]= 365.*(self.time/self.year)*self.det_Su*(self.a**2/self.H)*(self.norm['B8']*
-                                                                                    RB8/self.Data_Su[:,-1])
+            self.pred_Su[i]= 365.*(self.time/self.year)*self.det_Su*(self.a**2/self.H)*(self.norm['B8']*
+                                                                                    RB8/self.data_Su[:,-1])
             
-        return Chi2(self.Pred_Bo,self.Pred_Su,self.Data_Bo,self.Data_Su,self.f,self.delta,self.M12,self.M12_bar,self.sig_M12)
+        return Chi2(self.pred_Bo,self.pred_Su,self.data_Bo,self.data_Su,self.f,self.delta,self.m12,self.m12_bar,self.sig_m12)
 
 def Sun_Earth_distance(resolution=0.08):
     a     = (1.521e11 + 1.471e11)/2  #L = 1.5e11 meter 
