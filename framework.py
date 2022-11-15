@@ -98,7 +98,7 @@ class framework(object):
                                 'pep': dCS(G,self.me,self.E['pep'][0],self.T['pep'],-1),
                                 'B8' : [dCS(G,self.me,self.E['B8'][i:],t,-1) for i,t in enumerate (self.T['B8'])]}}
         
-		#Super-k detector response function   
+	#Super-k detector response function   
         self.Res = Res_Su(self.Data_Su,self.T['B8'])
         
         self.T13  = 8.57
@@ -116,8 +116,8 @@ class framework(object):
                       (1/(1+self.delta[:,2,np.newaxis]*resol[:,1]/100)))
 		
 		
-		#Base on KamLAND
-		self.M12_bar = 7.54e-5
+	#Base on KamLAND
+	self.M12_bar = 7.54e-5
     	self.sig_M12 = 0.5e-5
         if M12_Nusiance: 
             self.M12     = np.linspace(self.M12_bar-(2*self.sig_M12),self.M12_bar+(2*self.sig_M12),7)
@@ -271,7 +271,7 @@ def event_rate_maker(Pee,Pes,CS,E,T,L,spec,theta,Data_Su,Res):
 
 
 def Chi2(pred_bo,pred_su,data_bo,data_su,f,delta,M12,M12_bar,sig_M12):
-	#Flux normalization uncertainties taking from solar standrad model predection  
+    #Flux normalization uncertainties taking from solar standrad model predection  
     sig_norm_bo = np.array([0.01,0.06,0.01])
     sig_norm_su = 0.12
     
