@@ -6,44 +6,29 @@ class framework(object):
     #mumi is \Delta m_{i}^2 and has two options 'mum2' or 'mum1'
     #M12 is the mean value of \Delta m_{12}^2 
     #If M12_Nusiance='True' then M12 included as nusiance paramtere else it fixed to M12 value
-    
     def __init__(self,Su_nbin=23, mumi = 'mum2', M12=7.54e-5, M12_Nusiance='True'):
-	if Su_nbin > 24 or Su_nbin < 1 :
-  		raise Exception("the nubmer of bins is wrong")
-			
-	if mumi =! 'mum2' or mumi =! 'mum1' :
-  		raise Exception('maximal mass spliting name wrong')
-      
-     
+
         #Fermi constant :  1.166 \times 10^{-11}/Mev^2
         self.GF    = 1.166
-        
         #Electron mass : 0.511 Mev
         self.me    = 0.511
-        
         #h_{bar}c : 1.97 10^{-11} Mev.cm
         self.hbarc = 1.97
-        
         #proton mass :  1.67 \times 10^{-27} kg
-        self.mp    = 1.67
-                          
+        self.mp    = 1.67 
         #Nutrino Flux normalization :    Arxiv : 1611.09867 
         self.norm  = {'pp' : 5.98,
                       'Be7': 4.93e-1,
                       'pep': 1.44e-2, 
                       'B8' : 5.46e-4}   #\times 10^{10}
-        
-        
         #Neutrino production point weight function : http://www.sns.ias.edu/~jnb/
         load_phi   = np.loadtxt('./Solar_Standard_Model/bs2005agsopflux1.txt', unpack = True)
         self.phi   = {'pp' : load_phi[5,:],
                       'Be7': load_phi[10,:],
                       'pep': load_phi[11,:],
                       'B8' : load_phi[6,:]}
-        
         #Electron density inside sun 10^{23}/cm^{3}
         self.Ne  = 6*10**load_phi[2,:]
-        
         #Neutrino energy spectrum : http://www.sns.ias.edu/~jnb/
         spectrumB8      = np.loadtxt('8B_Spectrum.txt')
         spectrumB8[:,1] = spectrumB8[:,1]/np.trapz(spectrumB8[:,1],spectrumB8[:,0])
@@ -52,41 +37,32 @@ class framework(object):
                            'Be7': np.array([1,1]),
                            'pep': np.array([1])  ,
                            'B8' : spectrumB8[:,1]}
-        
         #Neutrino energy in Mev
         self.E          = {'pp' : spectrumpp[:,0]        ,
                            'Be7': np.array([0.384,0.862]),
                            'pep': np.array([1.44])       ,
                            'B8' : spectrumB8[:,0]        }
-        
         #electron recoil energy in Mev
         self.T   = {'pp' : self.E['pp'] /(1 + self.me /(2 * self.E['pp'])),
                     'Be7': np.linspace(0.05,self.E['Be7']/(1+self.me/(2*self.E['Be7'])),100),
                     'pep': np.linspace(0.05,self.E['pep'][0]/(1+self.me/(2*self.E['pep'][0])),100),
                     'B8' : self.E['B8'] /(1 + self.me /(2 * self.E['B8']))}
-        
-
         #Borexino Data event (count per day per 100 ton) : https://doi.org/10.1038/s41586-018-0624-y 
         #Eur. Phys. J. C 80, 1091 (2020)
         self.Data_Bo = {'pp' : {'R' : 134.,'e' : 20.},
                         'Be7': {'R' : 48.3,'e' : 1.8},
                         'pep': {'R' : 2.43,'e' : 0.58}}
-        
-        
         #Super-K Data event (count per year per  kilo ton) :
         self.Data_Su  = np.loadtxt('./Data/B8_Data_2020.txt')[:Su_nbin,:]
-        
         #detector normalization 
         #Borexino : per 100 ton :  3.307 \times 10^{31} 
         #Super-K  : per Kton    :  (10/18) \times 10^{6}/m_p
         self.det_Bo = 0.03307              
-        self.det_Su = (10/18) * 1/self.mp  
-        
+        self.det_Su = (10/18) * 1/self.mp
         #event per day  : 24 \times 60 \times 60 
         self.time   = 24.*6.*6.     
         self.L,self.a,self.theta,self.H   = Sun_Earth_distance()
         self.year  = 60*60*24*365.25
-        
 		#electron recoil cross section
         G        = self.hbarc * self.GF
         self.CS  = {'e' : {'pp' : [dCS(G,self.me,self.E['pp'][i:],t,1) for i,t in enumerate (self.T['pp'])], 
@@ -98,7 +74,7 @@ class framework(object):
                                 'pep': dCS(G,self.me,self.E['pep'][0],self.T['pep'],-1),
                                 'B8' : [dCS(G,self.me,self.E['B8'][i:],t,-1) for i,t in enumerate (self.T['B8'])]}}
         
-	#Super-k detector response function   
+	    #Super-k detector response function   
         self.Res = Res_Su(self.Data_Su,self.T['B8'])
         
         self.T13  = 8.57
@@ -116,11 +92,11 @@ class framework(object):
                       (1/(1+self.delta[:,2,np.newaxis]*resol[:,1]/100)))
 		
 		
-	#Base on KamLAND
-	self.M12_bar = 7.54e-5
-    	self.sig_M12 = 0.5e-5
-        if M12_Nusiance: 
-            self.M12     = np.linspace(self.M12_bar-(2*self.sig_M12),self.M12_bar+(2*self.sig_M12),7)
+	    #Base on KamLAND
+        self.M12_bar  = 7.54e-5
+        self.sig_M12  = 5.0e-6
+        if M12_Nusiance:
+            self.M12 = np.linspace(self.M12_bar-(2*self.sig_M12),self.M12_bar+(2*self.sig_M12),7)
             
         else:
             self.M12 = np.array([M12])

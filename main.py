@@ -1,9 +1,8 @@
 import argparse
 
+from ch2finder import Chi2_Finder
+
 from framework import framework
-from ch2finder import Chi2finder
-
-
 
 parser = argparse.ArgumentParser(description='Join CHi2 Analsys for constraning the psudo-Diac scheme by Super-Kamiokande and Borexino Data',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
