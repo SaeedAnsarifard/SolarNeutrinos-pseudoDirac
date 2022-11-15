@@ -1,3 +1,5 @@
+#Y. Nakajima, “Solar neutrino measurements with Super-Kamiokande.” Talk given at the XXIX International Conference
+#on Neutrino Physics and Astrophysics, June 30, 2020.
 #Emin  Emax   Data/MC  Error    MC
 3.5    4.0    0.460    0.047    196.6
 4.0    4.5    0.455    0.024    182.8
