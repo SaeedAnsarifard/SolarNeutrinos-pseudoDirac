@@ -18,7 +18,7 @@ In order to have the low resolution \Delta m_2^2 chi2 results, simply type in yo
 
     python main.py
 
-To see the optional argument run
+To see the optional arguments run
 
     python main.py --h 
 
