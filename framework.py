@@ -53,9 +53,9 @@ class FrameWork(object):
         
         #Borexino Data event (count per day per 100 ton) : https://doi.org/10.1038/s41586-018-0624-y 
         #Eur. Phys. J. C 80, 1091 (2020)
-        self.data_bo    = {'pp' : {'R' : 134.,'e' : 20.},
-                           'Be7': {'R' : 48.3,'e' : 1.8},
-                           'pep': {'R' : 2.43,'e' : 0.58}}
+        self.data_bo    = {'pp' : {'R' : 134.,'e' : 14.},
+                           'Be7': {'R' : 48.3,'e' : 1.3},
+                           'pep': {'R' : 2.43,'e' : 0.42}}
 
         #Super-K Data event (count per year per  kilo ton) :
         self.data_su  = np.loadtxt('./Data/B8_Data_2020.txt')[:su_nbin,:]
