@@ -185,7 +185,7 @@ def SurvivalProbablity(phi, enu, n_e, f_c, hbarc, param, ls):
     for j,l in enumerate(ls):
         ae1 = cos * np.cos(tm)**2  * np.cos(10*param['mum1']*l/(hbarc*2*e))**2
         ae2 = sin * np.sin(tm)**2  * np.cos(10*param['mum2']*l/(hbarc*2*e))**2
-        ae3 = np.sin((np.pi/180)*param['T13'])**4
+        ae3 = np.sin((np.pi/180)*param['T13'])**4 * np.cos(10*param['mum3']*l/(hbarc*2*e))**2
 
         pee = ae1 + ae2 + ae3
         pel[j]  = np.sum(np.reshape(phi,(n_e.shape[0],1))*pee,axis=0)
