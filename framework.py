@@ -74,15 +74,16 @@ class FrameWork(object):
         self.year   = 60*60*24*365.25
         
         #electron recoil cross section
-        g        = self.hbarc * self.f_c
-        self.cs  = {'e'      : {'pp' : [DCS(g,self.m_e,self.e_nu['pp'][i:],t,1) for i,t in enumerate (self.t_e['pp'])], 
-                                'Be7': [DCS(g,self.m_e,self.e_nu['Be7'][i],self.t_e['Be7'][:,i],1) for i in range(2)],  
-                                'pep':  DCS(g,self.m_e,self.e_nu['pep'][0],self.t_e['pep'],1),
-                                'B8' : [DCS(g,self.m_e,self.e_nu['B8'][i:],t,1) for i,t in enumerate (self.t_e['B8'])]}, 
-                    'mu/tau' : {'pp' : [DCS(g,self.m_e,self.e_nu['pp'][i:],t,-1) for i,t in enumerate (self.t_e['pp'])], 
-                                'Be7': [DCS(g,self.m_e,self.e_nu['Be7'][i],self.t_e['Be7'][:,i],-1) for i in range(2)],  
-                                'pep':  DCS(g,self.m_e,self.e_nu['pep'][0],self.t_e['pep'],-1),
-                                'B8' : [DCS(g,self.m_e,self.e_nu['B8'][i:],t,-1) for i,t in enumerate (self.t_e['B8'])]}}
+        self.g    = self.hbarc * self.f_c
+        self.uppt = 100
+        # self.cs  = {'e'      : {'pp' : [DCS(g,self.m_e,self.e_nu['pp'][i:],t,1) for i,t in enumerate (self.t_e['pp'])], 
+        #                         'Be7': [DCS(g,self.m_e,self.e_nu['Be7'][i],self.t_e['Be7'][:,i],1) for i in range(2)],  
+        #                         'pep':  DCS(g,self.m_e,self.e_nu['pep'][0],self.t_e['pep'],1),
+        #                         'B8' : [DCS(g,self.m_e,self.e_nu['B8'][i:],t,1) for i,t in enumerate (self.t_e['B8'])]}, 
+        #             'mu/tau' : {'pp' : [DCS(g,self.m_e,self.e_nu['pp'][i:],t,-1) for i,t in enumerate (self.t_e['pp'])], 
+        #                         'Be7': [DCS(g,self.m_e,self.e_nu['Be7'][i],self.t_e['Be7'][:,i],-1) for i in range(2)],  
+        #                         'pep':  DCS(g,self.m_e,self.e_nu['pep'][0],self.t_e['pep'],-1),
+        #                         'B8' : [DCS(g,self.m_e,self.e_nu['B8'][i:],t,-1) for i,t in enumerate (self.t_e['B8'])]}}
         
         #Super-k detector response function   
         self.res  = ResSu(self.data_su,self.t_e['B8'])
@@ -118,19 +119,36 @@ class FrameWork(object):
     def __getitem__(self,param_ubdate):
         self.param['T12']     = param_ubdate[0]
         self.param[self.mumi] = param_ubdate[1]
-        
+        components = ['pp','Be7','pep','B8']
         for i in range(self.m12.shape[0]):
             self.param['M12']= self.m12[i]
-            components = ['pp','Be7','pep','B8']
             pee        = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
             pes        = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
+            rrec       = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
             for c in components:
                 for j in range(len(self.t_e[c])):
                     t = self.t_e[c][j]
                     e = self.e_nu[c][j]
                     sp= self.spec[c][j]
                     pee[c][j],pes[c][j] = SurvivalProbablity(self.phi[c], e, self.n_e, self.f_c, self.hbarc, self.param, self.l)
-                    r_pep,r_be7,r_pp,r_b8 = EventRateMaker(pee, pes, self.cs, self.e_nu, self.t_e, self.l, self.spec, self.theta, self.data_su, self.res)
+                    r = np.zeros((self.l.shape[0],t.shape[0]))
+                    k = 0
+                    for z,ts in enumerate(t):
+                        if z<=self.uppt:
+                            cse = DCS(self.g,self.m_e,e,ts,1)
+                            csmu= DCS(self.g,self.m_e,e,ts,-1)
+                            r[:,i] = np.trapz(sp*(cse*pee[c][j]+csmu*(1-pee[c][j]-pes[c][j])),e,axis=1)
+                        else:
+                            cse = DCS(self.g,self.m_e,e[k:],ts,1)
+                            csmu= DCS(self.g,self.m_e,e[k:],ts,-1)
+                            r[:,i] = np.trapz(sp[k:]*(cse*pee[c][j][:,k:]+csmu*(1-pee[c][j][:,k:]-pes[c][j][:,k:])),e[k:],axis=1)
+                            k = k +1
+                    rrec[c][j] = r
+
+
+
+                    
+                    r_pep,r_be7,r_pp,r_b8 = EventRateMaker(pee[c][j], pes[c][j], self.cs, e, t, self.l, sp, self.theta, self.data_su, self.res)
 
             self.pred_bo[i] = (self.time/self.year) * self.det_bo * (self.a**2/self.h) * np.array([self.norm['pp'] * r_pp, self.norm['Be7'] * r_be7, self.norm['pep'] * r_pep])
             self.pred_su[i] = 365.*(self.time/self.year) * self.det_su * (self.a**2/self.h)*(self.norm['B8']*r_b8/self.data_su[:,-1])
@@ -146,11 +164,11 @@ def SunEarthDistance(resolution=0.08):
     h     = np.trapz(l**2,theta)/(60*60*24*365.25)
     return l,a,theta,h
 
-def IntegralLimit(e,lowt=-4,num=100):
+def IntegralLimit(e,lowt=-4,uppt=100):
     mint = np.min(e)
     maxt = np.max(e)
     mint = np.log10(mint/(1+m_e/(2*mint)))
-    return np.concatenate((np.logspace(lowt,mint,num),e[1:]/(1+m_e/(2*e[1:]))))
+    return np.concatenate((np.logspace(lowt,mint,uppt),e[1:]/(1+m_e/(2*e[1:]))))
         
 def DCS(g, m_e, e_nu, t_e, i=1):
     #dsigma/dT_e as function of T_e and E_nu (electron recoil and neutrino energy)
