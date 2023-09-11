@@ -157,6 +157,9 @@ def DCS(g, m_e, e_nu, t_e, i=1):
     #weak mixing angle = 0.22342 : https://pdg.lbl.gov/2019/reviews/rpp2019-rev-standard-model.pdf
     sw    = 0.2315
 
+    #Bahcall, John N., Marc Kamionkowski, and Alberto Sirlin. 
+    #"Solar neutrinos: Radiative corrections in neutrino-electron scattering experiments." 
+    #Physical Review D 51.11 (1995): 6146.
     rho   = 1.0126
     x     = np.sqrt(1 + 2*m_e/t_e)
     it    = (1/6) * ((1/3) + (3 - x**2) * ((x/2) * (np.log(x+1) - np.log(x-1)) - 1))
