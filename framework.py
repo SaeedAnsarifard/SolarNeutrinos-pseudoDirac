@@ -14,11 +14,11 @@ class FrameWork(object):
         #proton mass :  1.67 \times 10^{-27} kg
         self.m_p    = 1.67 
         
-        #Nutrino Flux normalization :    Arxiv : 1611.09867 
-        self.norm  = {'pp' : 5.98,
-                      'Be7': 4.93e-1,
-                      'pep': 1.44e-2, 
-                      'B8' : 5.46e-4}   #\times 10^{10}
+        #Nutrino Flux normalization :    Arxiv : 1611.09867 (HZ)
+        self.norm  = {'pp' : [5.98],
+                      'Be7': [0.9*4.93e-1,0.1*4.93e-1],
+                      'pep': [1.44e-2], 
+                      'B8' : [5.46e-4]}   #\times 10^{10}
         
         #Neutrino production point weight function : http://www.sns.ias.edu/~jnb/
         load_phi   = np.loadtxt('./Solar_Standard_Model/bs2005agsopflux1.txt', unpack = True)
@@ -31,19 +31,21 @@ class FrameWork(object):
         self.n_e  = 6*10**load_phi[2,:]
         
         #Neutrino energy spectrum : http://www.sns.ias.edu/~jnb/
-        spectrumB8      = np.loadtxt('./Spectrum/8B_Spectrum.txt')
-        spectrumB8[:,1] = spectrumB8[:,1]/np.trapz(spectrumB8[:,1],spectrumB8[:,0])
-        spectrumpp      = np.loadtxt('./Spectrum/ppenergytab1.txt')
-        self.spec       = {'pp' : spectrumpp[:,1],
-                           'Be7': np.array([1,1]),
-                           'pep': np.array([1])  ,
-                           'B8' : spectrumB8[:,1]}
+        spectrumB8      = np.loadtxt('./Spectrum/8B_spectrum.txt')
+        spectrumpp      = np.loadtxt('./Spectrum/pp_spectrum.txt')
+        spectrumbe71    = np.loadtxt('./Spectrum/be71_spectrum.txt')
+        spectrumbe72    = np.loadtxt('./Spectrum/be72_spectrum.txt')
+        spectrumpep     = np.loadtxt('./Spectrum/pep_spectrum.txt')
+        self.spec       = {'pp' : [spectrumpp[:,1]],
+                           'Be7': [spectrumbe71[:,1],spectrumbe72[:,1]],
+                           'pep': [spectrumpep[:,1]]  ,
+                           'B8' : [spectrumB8[:,1]]}
         
         #Neutrino energy in Mev
-        self.e_nu       = {'pp' : spectrumpp[:,0]        ,
-                           'Be7': np.array([0.384,0.862]),
-                           'pep': np.array([1.44])       ,
-                           'B8' : spectrumB8[:,0]        }
+        self.e_nu       = {'pp' : [spectrumpp[:,0]],
+                           'Be7': [spectrumbe71[:,0],spectrumbe72[:,0]],
+                           'pep': [spectrumpep[:,0]]),
+                           'B8' : [spectrumB8[:,0]]}
         
         #electron recoil energy in Mev
         self.t_e        = {'pp' : self.e_nu['pp'] /(1 + self.m_e /(2 * self.e_nu['pp'])),
