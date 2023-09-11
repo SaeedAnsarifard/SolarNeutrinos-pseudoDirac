@@ -48,10 +48,10 @@ class FrameWork(object):
                            'B8' : [spectrumB8[:,0]]}
         
         #electron recoil energy in Mev
-        self.t_e        = {'pp' : self.e_nu['pp'] /(1 + self.m_e /(2 * self.e_nu['pp'])),
-                           'Be7': np.linspace(0.05,self.e_nu['Be7']/(1+self.m_e/(2*self.e_nu['Be7'])),100),
-                           'pep': np.linspace(0.05,self.e_nu['pep'][0]/(1+self.m_e/(2*self.e_nu['pep'][0])),100),
-                           'B8' : self.e_nu['B8'] /(1 + self.m_e /(2 * self.e_nu['B8']))}
+        self.t_e        = {'pp'  : [IntegralLimit(spectrumpp[:,0])],
+                           'Be7' : [IntegralLimit(spectrumbe71[:,0]),IntegralLimit(spectrumbe72[:,0])],
+                           'pep' : [IntegralLimit(spectrumpep[:,0])],
+                           'B8'  : [IntegralLimit(spectrumB8[:,0])]}
         
         #Borexino Data event (count per day per 100 ton) : https://doi.org/10.1038/s41586-018-0624-y 
         #Eur. Phys. J. C 80, 1091 (2020)
@@ -97,7 +97,7 @@ class FrameWork(object):
                       (1/(1+self.delta[:,1,np.newaxis]*scale[:,1]/100))*
                       (1/(1+self.delta[:,2,np.newaxis]*resol[:,1]/100)))
         
-        #Base on KamLAND
+        #Based on KamLAND
         self.m12_bar  = 7.54e-5
         self.sig_m12  = 5.0e-6
         if m12_nuisance:
@@ -144,19 +144,42 @@ def SunEarthDistance(resolution=0.08):
     l     = a*(1-e**2)/(1+e*cos)    
     h     = np.trapz(l**2,theta)/(60*60*24*365.25)
     return l,a,theta,h
-    
-    
-def DCS(g, m_e, e_nu, t_e, i):
+
+def IntegralLimit(e,lowt=-4,num=100):
+    mint = np.min(e)
+    maxt = np.max(e)
+    mint = np.log10(mint/(1+m_e/(2*mint)))
+    return np.concatenate((np.logspace(lowt,mint,num),e[1:]/(1+m_e/(2*e[1:]))))
+        
+def DCS(g, m_e, e_nu, t_e, i=1):
     #dsigma/dT_e as function of T_e and E_nu (electron recoil and neutrino energy)
 
     #weak mixing angle = 0.22342 : https://pdg.lbl.gov/2019/reviews/rpp2019-rev-standard-model.pdf
-    sw  = 0.23857#0.22342
-    y   = t_e/e_nu
-    a1  = (2 * sw + i)**2
-    a2  =  4 * sw**2 * (1 - y)**2
-    a3  =  2 * sw * (2 * sw + i) * m_e * y/e_nu
-    return  g**2 * (m_e/(2*np.pi)) * (a1+a2-a3) * 10 #\times 10^{-45} in cm^2
+    sw    = 0.2315
 
+    rho   = 1.0126
+    x     = np.sqrt(1 + 2*m_e/t_e)
+    it    = (1/6) * ((1/3) + (3 - x**2) * ((x/2) * (np.log(x+1) - np.log(x-1)) - 1))
+    if i == 1:
+        kappa = 0.9791 + 0.0097 * it
+        gl    = rho * (0.5 - kappa * sw) - 1
+    if i == -1:
+        kappa = 0.9970 - 0.00037 * it
+        gl    = rho * (0.5 - kappa * sw)
+    gr    = -rho * kappa * sw
+    
+    z     = t_e/e_nu
+    #radiative correction
+    ap  = 1/(137*np.pi)
+    fm  = 0
+    fp  = 0
+    fmp = 0
+    
+    a1  = gl**2 * (1 + ap * fm)
+    a2  = gr**2 * (1 + ap * fp) * (1-z)**2
+    a3  = gr * gl * (1 + ap * fmp) * (m_e/e_nu) * z
+    
+    return  2 * g**2 * (m_e/np.pi) * (a1 + a2 - a3) * 10 #\times 10^{-45} in cm^2
 
 def ResSu(data, t_e):
     r   = np.zeros((data.shape[0],t_e.shape[0]))
