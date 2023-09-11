@@ -103,7 +103,8 @@ class FrameWork(object):
                         'mum2': 0. ,
                         'mum3': 0. ,
                         'M12' : m12 }
-        
+
+        self.dr_dldt = [{'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] } for i in range(self.m12.shape[0])]
         self.pred_bo = np.zeros((self.m12.shape[0],3))
         self.pred_su = np.zeros((self.m12.shape[0],self.data_su.shape[0]))
         
@@ -115,7 +116,6 @@ class FrameWork(object):
             self.param['M12']= self.m12[i]
             pee        = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
             pes        = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
-            rrec       = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
             for c in components:
                 for j in range(len(self.t_e[c])):
                     t = self.t_e[c][j]
@@ -134,13 +134,22 @@ class FrameWork(object):
                             csmu= DCS(self.g,self.m_e,e[k:],ts,-1)
                             r[:,i] = np.trapz(sp[k:]*(cse*pee[c][j][:,k:]+csmu*(1-pee[c][j][:,k:]-pes[c][j][:,k:])),e[k:],axis=1)
                             k = k +1
-                    rrec[c][j] = (self.time/self.year) * (self.a**2/self.h) * self.norm[c][j] * np.trapz(r,self.theta,axis=0)
-                    
+                    self.dr_dldt[i][c][j] = (self.a**2/self.h) * self.norm[c][j] * r #number of event per each delta theta
+
             for k in range(3):
-                for j in range(len(self.t_e[k])):
-                    self.pred_bo[i][k] = self.pred_bo[i][k] + self.det_bo * np.trapz(rrec[k][j],self.t_e[k][j])
-            for k in range(self.data_su.shape[0]):
-                self.pred_su[i][k] = 365. * (self.det_su/self.data_su[k,-1]) * np.trapz(self.res[k]*rrec['B8'][0],self.t_e['B8'][0])
+                self.pred_bo[i][k] = BorexinoTotalEventPrediction(self.dr_dldt[i][k],self.t_e[k],self.time,self.year,self.detector,self.theta)
+            self.pred_su[i] = SuperkTotalEventPrediction(self.data_su,self.dr_dldt[i]['B8'],self.t_e['B8'],self.year,self.theta,self.det_su,self.res)
+
+
+            def SuperkTotalEventPrediction(data_su,dr_dldt,t,year,theta,detector,res):
+                num_event = np.zeros((theta.shape[0],data_su.shape[0]))
+                for i in range(data_su.shape[0]):
+                    num_event[:,i] = (365./year) * (detector/data_su[i,-1]) * np.trapz(dr_dldt*res[i],t,axis=1)
+                    
+                return np.trapz(num_event,theta,axis=0)
+
+
+        
                     
         return Chi2(self.pred_bo, self.pred_su, self.data_bo, self.data_su, self.f, self.delta, self.m12, self.m12_bar, self.sig_m12)
 
@@ -235,6 +244,14 @@ def SurvivalProbablity(phi, enu, n_e, f_c, hbarc, param, ls):
         psl[j]  = np.sum(np.reshape(phi,(n_e.shape[0],1))*pes,axis=0)
 
     return pel, psl
+
+
+def BorexinoTotalEventPrediction(rlt,t,time,year,detector,theta): 
+    num_event = 0
+    for i in range(len(t)):
+        rt = (time/year) * detector * np.trapz(rlt[i],theta,axis=0)
+        num_event = num_event + np.trapz(rt,t[i])
+    return num_event
 
 def Chi2(pred_bo,pred_su,data_bo,data_su,f,delta,m12,m12_bar,sig_m12):
     #Flux normalization uncertainties taking from solar standard model prediction  
