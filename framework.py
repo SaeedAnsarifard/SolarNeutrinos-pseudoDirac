@@ -138,18 +138,7 @@ class FrameWork(object):
 
             for k in range(3):
                 self.pred_bo[i][k] = BorexinoTotalEventPrediction(self.dr_dldt[i][k],self.t_e[k],self.time,self.year,self.detector,self.theta)
-            self.pred_su[i] = SuperkTotalEventPrediction(self.data_su,self.dr_dldt[i]['B8'],self.t_e['B8'],self.year,self.theta,self.det_su,self.res)
-
-
-            def SuperkTotalEventPrediction(data_su,dr_dldt,t,year,theta,detector,res):
-                num_event = np.zeros((theta.shape[0],data_su.shape[0]))
-                for i in range(data_su.shape[0]):
-                    num_event[:,i] = (365./year) * (detector/data_su[i,-1]) * np.trapz(dr_dldt*res[i],t,axis=1)
-                    
-                return np.trapz(num_event,theta,axis=0)
-
-
-        
+            self.pred_su[i] = SuperkTotalEventPrediction(self.data_su,self.dr_dldt[i]['B8'],self.t_e['B8'],365*self.time,self.year,self.theta,self.det_su,self.res)
                     
         return Chi2(self.pred_bo, self.pred_su, self.data_bo, self.data_su, self.f, self.delta, self.m12, self.m12_bar, self.sig_m12)
 
@@ -253,6 +242,13 @@ def BorexinoTotalEventPrediction(rlt,t,time,year,detector,theta):
         num_event = num_event + np.trapz(rt,t[i])
     return num_event
 
+
+def SuperkTotalEventPrediction(data_su,dr_dldt,t,time,year,theta,detector,res):
+    num_event = np.zeros((theta.shape[0],data_su.shape[0]))
+    for i in range(data_su.shape[0]):
+        num_event[:,i] = (time/year) * (detector/data_su[i,-1]) * np.trapz(dr_dldt*res[i],t,axis=1)
+    return np.trapz(num_event,theta,axis=0)
+    
 def Chi2(pred_bo,pred_su,data_bo,data_su,f,delta,m12,m12_bar,sig_m12):
     #Flux normalization uncertainties taking from solar standard model prediction  
     sig_norm_bo = np.array([0.01,0.06,0.01])
