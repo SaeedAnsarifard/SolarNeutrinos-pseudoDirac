@@ -73,18 +73,9 @@ class FrameWork(object):
         self.l,self.a,self.theta,self.h   = SunEarthDistance()
         self.year   = 60*60*24*365.25
         
-        #electron recoil cross section
         self.g    = self.hbarc * self.f_c
         self.uppt = 100
-        # self.cs  = {'e'      : {'pp' : [DCS(g,self.m_e,self.e_nu['pp'][i:],t,1) for i,t in enumerate (self.t_e['pp'])], 
-        #                         'Be7': [DCS(g,self.m_e,self.e_nu['Be7'][i],self.t_e['Be7'][:,i],1) for i in range(2)],  
-        #                         'pep':  DCS(g,self.m_e,self.e_nu['pep'][0],self.t_e['pep'],1),
-        #                         'B8' : [DCS(g,self.m_e,self.e_nu['B8'][i:],t,1) for i,t in enumerate (self.t_e['B8'])]}, 
-        #             'mu/tau' : {'pp' : [DCS(g,self.m_e,self.e_nu['pp'][i:],t,-1) for i,t in enumerate (self.t_e['pp'])], 
-        #                         'Be7': [DCS(g,self.m_e,self.e_nu['Be7'][i],self.t_e['Be7'][:,i],-1) for i in range(2)],  
-        #                         'pep':  DCS(g,self.m_e,self.e_nu['pep'][0],self.t_e['pep'],-1),
-        #                         'B8' : [DCS(g,self.m_e,self.e_nu['B8'][i:],t,-1) for i,t in enumerate (self.t_e['B8'])]}}
-        
+
         #Super-k detector response function   
         self.res  = ResSu(self.data_su,self.t_e['B8'])
                 
@@ -113,8 +104,8 @@ class FrameWork(object):
                         'mum3': 0. ,
                         'M12' : m12 }
         
-        self.pred_bo = np.zeros((self.m12.shape[0],3))
-        self.pred_su = np.zeros((self.m12.shape[0],self.data_su.shape[0]))
+        self.pred_bo = np.zeros((self.m12.shape[0],3,1))
+        self.pred_su = np.zeros((self.m12.shape[0],1,self.data_su.shape[0]))
         
     def __getitem__(self,param_ubdate):
         self.param['T12']     = param_ubdate[0]
@@ -124,8 +115,8 @@ class FrameWork(object):
             self.param['M12']= self.m12[i]
             pee        = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
             pes        = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
-            rrec       = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
-            for c in components:
+            rrec       = [[],[]]
+            for cnum,c in enumerate (components):
                 for j in range(len(self.t_e[c])):
                     t = self.t_e[c][j]
                     e = self.e_nu[c][j]
@@ -143,15 +134,15 @@ class FrameWork(object):
                             csmu= DCS(self.g,self.m_e,e[k:],ts,-1)
                             r[:,i] = np.trapz(sp[k:]*(cse*pee[c][j][:,k:]+csmu*(1-pee[c][j][:,k:]-pes[c][j][:,k:])),e[k:],axis=1)
                             k = k +1
-                    rrec[c][j] = r
-
-
-
+                    rrec[0].append((self.time/self.year) * (self.a**2/self.h) * self.norm[c][j] * np.trapz(r,self.theta,axis=0))
+                    rrec[1].append(t)
                     
-                    r_pep,r_be7,r_pp,r_b8 = EventRateMaker(pee[c][j], pes[c][j], self.cs, e, t, self.l, sp, self.theta, self.data_su, self.res)
-
-            self.pred_bo[i] = (self.time/self.year) * self.det_bo * (self.a**2/self.h) * np.array([self.norm['pp'] * r_pp, self.norm['Be7'] * r_be7, self.norm['pep'] * r_pep])
-            self.pred_su[i] = 365.*(self.time/self.year) * self.det_su * (self.a**2/self.h)*(self.norm['B8']*r_b8/self.data_su[:,-1])
+                self.pred_bo[i][0] =   self.det_bo * np.trapz(rrec[0][0],rrec[1][0])
+                self.pred_bo[i][1] =   self.det_bo * (np.trapz(rrec[0][1],rrec[1][1]) + np.trapz(rrec[0][2],rrec[1][2]))
+                self.pred_bo[i][2] =   self.det_bo * np.trapz(rrec[0][3],rrec[1][3])
+                for j in range(self.data_su.shape[0]):
+                    self.pred_su[i][j] = 365. * (self.det_su/self.data_su[j,-1]) * np.trapz(self.res[j]*rrec[0][4],rrec[1][4],axis=1)
+                    
         return Chi2(self.pred_bo, self.pred_su, self.data_bo, self.data_su, self.f, self.delta, self.m12, self.m12_bar, self.sig_m12)
 
 def SunEarthDistance(resolution=0.08):
@@ -245,44 +236,6 @@ def SurvivalProbablity(phi, enu, n_e, f_c, hbarc, param, ls):
         psl[j]  = np.sum(np.reshape(phi,(n_e.shape[0],1))*pes,axis=0)
 
     return pel, psl
-
-def EventRateMaker(pee, pes, cs, enu, t_e, l, spec, theta, data_su, res):
-    rpep_l = np.zeros(l.shape[0])
-    
-    rbe7_l = np.zeros((l.shape[0],2))
-    
-    rpp_t  = np.zeros((l.shape[0],enu['pp'].shape[0]))
-    rpp_l  = np.zeros(l.shape[0])
-    
-    rb8_t  = np.zeros((l.shape[0],t_e['B8'].shape[0]))
-    rb8_l  = np.zeros((l.shape[0],data_su.shape[0]))
-    rb8    = np.zeros((data_su.shape[0]))
-    
-    rpep_l = np.trapz((cs['e']['pep']*pee['pep'][:,0,np.newaxis] + cs['mu/tau']['pep']*(1-pee['pep'][:,0,np.newaxis]-pes['pep'][:,0,np.newaxis])),t_e['pep'],axis=1)
-    rpep   = np.trapz(rpep_l,theta)
-    
-    for i in range(2):
-        rbe7_l[:,i] = np.trapz((cs['e']['Be7'][i]*pee['Be7'][:,i,np.newaxis] + cs['mu/tau']['Be7'][i]*(1-pee['Be7'][:,i,np.newaxis]-pes['Be7'][:,i,np.newaxis])),t_e['Be7'][:,i],axis=1)
-                                                        
-    rbe7 =  (0.1*np.trapz(rbe7_l[:,0],theta) + np.trapz(rbe7_l[:,1],theta))
-
-    for i,t in enumerate(t_e['pp']):
-        rpp_t[:,i] = np.trapz(spec['pp'][np.newaxis,i:]* (cs['e']['pp'][i][np.newaxis,:]*pee['pp'][:,i:] + cs['mu/tau']['pp'][i][np.newaxis,:]*(1-pee['pp'][:,i:]-pes['pp'][:,i:])),enu['pp'][i:],axis=1)
-                                                 
-    rpp_l = np.trapz(rpp_t,t_e['pp'],axis=1)  
-    rpp   = np.trapz(rpp_l,theta)
-
-    for i,t in enumerate(t_e['B8']):
-        cs1 = cs['e']['B8'][i][np.newaxis,:]
-        cs2 = cs['mu/tau']['B8'][i][np.newaxis,:]
-        rb8_t[:,i] = np.trapz(spec['B8'][i:]*(cs1*pee['B8'][:,i:] + cs2*(1-pee['B8'][:,i:]-pes['B8'][:,i:])),enu['B8'][i:])
-                                              
-    for k in range(data_su.shape[0]):
-        rb8_l[:,k] = np.trapz(res[k]*rb8_t,t_e['B8'],axis=1)
-
-    rb8  =  np.trapz(rb8_l,theta,axis=0)
-    return rpep,rbe7,rpp,rb8
-
 
 def Chi2(pred_bo,pred_su,data_bo,data_su,f,delta,m12,m12_bar,sig_m12):
     #Flux normalization uncertainties taking from solar standard model prediction  
