@@ -77,7 +77,7 @@ class FrameWork(object):
         self.uppt = 100
 
         #Super-k detector response function   
-        self.res  = ResSu(self.data_su,self.t_e['B8'])
+        self.res  = ResSu(self.data_su,self.t_e['B8'][0])
                 
         shape = np.loadtxt('./Correlated_Errors/Nutrino_shape_Systematic_Uncertainties.txt')[:su_nbin,:]        
         scale = np.loadtxt('./Correlated_Errors/Energy_Scale_Systematic_Uncertainties.txt')[:su_nbin,:]
@@ -104,8 +104,8 @@ class FrameWork(object):
                         'mum3': 0. ,
                         'M12' : m12 }
         
-        self.pred_bo = np.zeros((self.m12.shape[0],3,1))
-        self.pred_su = np.zeros((self.m12.shape[0],1,self.data_su.shape[0]))
+        self.pred_bo = np.zeros((self.m12.shape[0],3))
+        self.pred_su = np.zeros((self.m12.shape[0],self.data_su.shape[0]))
         
     def __getitem__(self,param_ubdate):
         self.param['T12']     = param_ubdate[0]
@@ -115,8 +115,8 @@ class FrameWork(object):
             self.param['M12']= self.m12[i]
             pee        = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
             pes        = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
-            rrec       = [[],[]]
-            for cnum,c in enumerate (components):
+            rrec       = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
+            for c in components:
                 for j in range(len(self.t_e[c])):
                     t = self.t_e[c][j]
                     e = self.e_nu[c][j]
@@ -134,14 +134,13 @@ class FrameWork(object):
                             csmu= DCS(self.g,self.m_e,e[k:],ts,-1)
                             r[:,i] = np.trapz(sp[k:]*(cse*pee[c][j][:,k:]+csmu*(1-pee[c][j][:,k:]-pes[c][j][:,k:])),e[k:],axis=1)
                             k = k +1
-                    rrec[0].append((self.time/self.year) * (self.a**2/self.h) * self.norm[c][j] * np.trapz(r,self.theta,axis=0))
-                    rrec[1].append(t)
+                    rrec[c][j] = (self.time/self.year) * (self.a**2/self.h) * self.norm[c][j] * np.trapz(r,self.theta,axis=0)
                     
-                self.pred_bo[i][0] =   self.det_bo * np.trapz(rrec[0][0],rrec[1][0])
-                self.pred_bo[i][1] =   self.det_bo * (np.trapz(rrec[0][1],rrec[1][1]) + np.trapz(rrec[0][2],rrec[1][2]))
-                self.pred_bo[i][2] =   self.det_bo * np.trapz(rrec[0][3],rrec[1][3])
-                for j in range(self.data_su.shape[0]):
-                    self.pred_su[i][j] = 365. * (self.det_su/self.data_su[j,-1]) * np.trapz(self.res[j]*rrec[0][4],rrec[1][4],axis=1)
+            for k in range(3):
+                for j in range(len(self.t_e[k])):
+                    self.pred_bo[i][k] = self.pred_bo[i][k] + self.det_bo * np.trapz(rrec[k][j],self.t_e[k][j])
+            for k in range(self.data_su.shape[0]):
+                self.pred_su[i][k] = 365. * (self.det_su/self.data_su[k,-1]) * np.trapz(self.res[k]*rrec['B8'][0],self.t_e['B8'][0])
                     
         return Chi2(self.pred_bo, self.pred_su, self.data_bo, self.data_su, self.f, self.delta, self.m12, self.m12_bar, self.sig_m12)
 
