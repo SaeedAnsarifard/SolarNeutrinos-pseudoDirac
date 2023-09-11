@@ -121,15 +121,16 @@ class FrameWork(object):
         
         for i in range(self.m12.shape[0]):
             self.param['M12']= self.m12[i]
-            pep_pee,pep_pes = SurvivalProbablity(self.phi['pep'], self.e_nu['pep'], self.n_e, self.f_c, self.hbarc, self.param, self.l)
-            be7_pee,be7_pes = SurvivalProbablity(self.phi['Be7'], self.e_nu['Be7'], self.n_e, self.f_c, self.hbarc, self.param, self.l)
-            pp_pee,pp_pes   = SurvivalProbablity(self.phi['pp'] , self.e_nu['pp'] , self.n_e, self.f_c, self.hbarc, self.param, self.l)
-            b8_pee,b8_pes   = SurvivalProbablity(self.phi['B8'] , self.e_nu['B8'] , self.n_e, self.f_c, self.hbarc, self.param, self.l)
-
-            pee = {'pp' : pp_pee, 'Be7' : be7_pee, 'pep' : pep_pee, 'B8' : b8_pee} 
-            pes = {'pp' : pp_pes, 'Be7' : be7_pes, 'pep' : pep_pes, 'B8' : b8_pes}
-            
-            r_pep,r_be7,r_pp,r_b8 = EventRateMaker(pee, pes, self.cs, self.e_nu, self.t_e, self.l, self.spec, self.theta, self.data_su, self.res)
+            components = ['pp','Be7','pep','B8']
+            pee        = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
+            pes        = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
+            for c in components:
+                for j in range(len(self.t_e[c])):
+                    t = self.t_e[c][j]
+                    e = self.e_nu[c][j]
+                    sp= self.spec[c][j]
+                    pee[c][j],pes[c][j] = SurvivalProbablity(self.phi[c], e, self.n_e, self.f_c, self.hbarc, self.param, self.l)
+                    r_pep,r_be7,r_pp,r_b8 = EventRateMaker(pee, pes, self.cs, self.e_nu, self.t_e, self.l, self.spec, self.theta, self.data_su, self.res)
 
             self.pred_bo[i] = (self.time/self.year) * self.det_bo * (self.a**2/self.h) * np.array([self.norm['pp'] * r_pp, self.norm['Be7'] * r_be7, self.norm['pep'] * r_pep])
             self.pred_su[i] = 365.*(self.time/self.year) * self.det_su * (self.a**2/self.h)*(self.norm['B8']*r_b8/self.data_su[:,-1])
