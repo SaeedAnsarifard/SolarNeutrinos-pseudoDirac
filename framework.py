@@ -31,7 +31,7 @@ class FrameWork(object):
         self.n_e  = 6*10**load_phi[2,:]
         
         #Neutrino energy spectrum : http://www.sns.ias.edu/~jnb/
-        spectrumB8      = np.loadtxt('./Spectrum/8B_spectrum.txt')
+        spectrumB8      = np.loadtxt('./Spectrum/B8_spectrum.txt')
         spectrumpp      = np.loadtxt('./Spectrum/pp_spectrum.txt')
         spectrumbe71    = np.loadtxt('./Spectrum/be71_spectrum.txt')
         spectrumbe72    = np.loadtxt('./Spectrum/be72_spectrum.txt')
