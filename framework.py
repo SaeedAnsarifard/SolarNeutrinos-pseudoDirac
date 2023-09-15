@@ -1,15 +1,5 @@
 import numpy as np
 
-
-#def ConstantVariables():
-#    f_c    = 1.166 #Fermi constant :  1.166 \times 10^{-11}/Mev^2
-#    m_e    = 0.511 #Electron mass : 0.511 Mev
-#    hbarc  = 1.97 #h_{bar}c : 1.97 10^{-11} Mev.cm
-#    m_p    = 1.67 #proton mass :  1.67 \times 10^{-27} kg
-#    return f_c,m_e,hbarc,m_p
-    
-    
-    
 f_c    = 1.166 #Fermi constant :  1.166 \times 10^{-11}/Mev^2
 m_e    = 0.511 #Electron mass : 0.511 Mev
 hbarc  = 1.97 #h_{bar}c : 1.97 10^{-11} Mev.cm
@@ -18,8 +8,6 @@ g      = hbarc * f_c
     
 class FrameWork(object):
     def __init__(self, su_nbin=23, mumi = 'mum2', t12 = 33.4, m12=7.54e-5, m12_nuisance=True):
-        #self.f_c,self.m_e,self.hbarc,self.m_p = ConstantVariables()
-                
         #Nutrino Flux normalization :    Arxiv : 1611.09867 (HZ)
         self.norm  = {'pp' : [5.98],
                       'Be7': [0.9*4.93e-1,0.1*4.93e-1],
@@ -54,10 +42,11 @@ class FrameWork(object):
                            'B8' : [spectrumB8[:,0]]}
         
         #electron recoil energy in Mev
-        self.t_e        = {'pp'  : [IntegralLimit(spectrumpp[:,0],m_e)],
-                           'Be7' : [IntegralLimit(spectrumbe71[:,0],m_e),IntegralLimit(spectrumbe72[:,0],m_e)],
-                           'pep' : [IntegralLimit(spectrumpep[:,0],m_e)],
-                           'B8'  : [IntegralLimit(spectrumB8[:,0],m_e)]}
+        self.uppt       = 100
+        self.t_e        = {'pp'  : [IntegralLimit(spectrumpp[:,0],m_e,uppt=self.uppt)],
+                           'Be7' : [IntegralLimit(spectrumbe71[:,0],m_e),IntegralLimit(spectrumbe72[:,0],m_e,uppt=self.uppt)],
+                           'pep' : [IntegralLimit(spectrumpep[:,0],m_e,uppt=self.uppt)],
+                           'B8'  : [IntegralLimit(spectrumB8[:,0],m_e,uppt=self.uppt)]}
         
         #Borexino Data event (count per day per 100 ton) : https://doi.org/10.1038/s41586-018-0624-y 
         #Eur. Phys. J. C 80, 1091 (2020)
@@ -66,27 +55,19 @@ class FrameWork(object):
                            'pep': {'R' : 2.43,'e' : 0.42}}
 
         #Super-K Data event (count per year per  kilo ton) :
-        self.data_su  = np.loadtxt('./Data/B8_Data_2020.txt')[:su_nbin,:]
-
-        #detector normalization 
-        #Borexino : per 100 ton :  3.307 \times 10^{31} 
-        #Super-K  : per Kton    :  (10/18) \times 10^{6}/m_p
-        self.det_bo = 0.03307              
-        self.det_su = (10/18) * 1/m_p
+        self.su_nbin  = su_nbin
+        self.data_su  = np.loadtxt('./Data/B8_Data_2020.txt')[:self.su_nbin,:]
         
-        #event per day  : 24 \times 60 \times 60 
-        self.time   = 24.*6.*6.     
+ 
         self.l,self.a,self.theta,self.h   = SunEarthDistance()
         self.year   = 60*60*24*365.25
-        
-        self.uppt   = 100
-
+    
         #Super-k detector response function   
         self.res  = ResSu(self.data_su,self.t_e['B8'][0])
                 
-        shape = np.loadtxt('./Correlated_Errors/Nutrino_shape_Systematic_Uncertainties.txt')[:su_nbin,:]        
-        scale = np.loadtxt('./Correlated_Errors/Energy_Scale_Systematic_Uncertainties.txt')[:su_nbin,:]
-        resol = np.loadtxt('./Correlated_Errors/Energy_Resolution_Systematic_Uncertainties.txt')[:su_nbin,:]
+        shape = np.loadtxt('./Correlated_Errors/Nutrino_shape_Systematic_Uncertainties.txt')[:self.su_nbin,:]
+        scale = np.loadtxt('./Correlated_Errors/Energy_Scale_Systematic_Uncertainties.txt')[:self.su_nbin,:]
+        resol = np.loadtxt('./Correlated_Errors/Energy_Resolution_Systematic_Uncertainties.txt')[:self.su_nbin,:]
 
         self.delta = np.random.normal(0,1,(500,3))
 
@@ -110,21 +91,21 @@ class FrameWork(object):
                         'M12' : m12 }
         
         #Unoscilated signal is produced to compare with the SuperKamiokande results. For more info see their papers!
-        self.borom_unoscilated = 2 * np.pi * (365.*self.time/self.year) * self.det_su * 5.25e-4 * (self.a**2/self.h) * BoromUnoscilated(self.t_e['B8'][0],self.e_nu['B8'][0],self.spec['B8'][0],g,m_e,self.uppt,self.data_su,self.res)
+        #Super-K  : per Kton    :  (10/18) \times 10^{6}/m_p
+        self.det_su = self.year * 24. * 6. * 6. * (10/18) * 1/m_p #number of target per Kton times per year 10^{35}
+        self.borom_unoscilated = 2 * np.pi * (self.det_su/self.year) * 5.25e-4 * (self.a**2/self.h) * BoromUnoscilated(self.t_e['B8'][0],self.e_nu['B8'][0],self.spec['B8'][0],g,m_e,self.uppt,self.su_nbin,self.res)
         
-        self.dr_dldt = [{'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] } for i in range(self.m12.shape[0])]
-        self.pred_bo = np.zeros((self.m12.shape[0],3))
-        self.pred_su = np.zeros((self.m12.shape[0],self.data_su.shape[0]))
+        self.dr_dldt    = [{'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] } for i in range(self.m12.shape[0])]
+        self.components = ['pp','Be7','pep','B8']
         
     def __getitem__(self,param_ubdate):
         self.param['T12']     = param_ubdate[0]
         self.param[self.mumi] = param_ubdate[1]
-        components = ['pp','Be7','pep','B8']
         for i in range(self.m12.shape[0]):
             self.param['M12']= self.m12[i]
             pee        = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
             pes        = {'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] }
-            for c in components:
+            for c in self.components:
                 for j in range(len(self.t_e[c])):
                     t = self.t_e[c][j]
                     e = self.e_nu[c][j]
@@ -142,13 +123,13 @@ class FrameWork(object):
                             csmu   = DCS(g,m_e,e[k:],ts,-1)
                             r[:,z] = np.trapz(sp[k:]*(cse*pee[c][j][:,k:]+csmu*(1-pee[c][j][:,k:]-pes[c][j][:,k:])),e[k:],axis=1)
                             k      = k + 1
-                    self.dr_dldt[i][c][j] = (self.a**2/self.h) * self.norm[c][j] * r #number of event per each delta theta
+                    self.dr_dldt[i][c][j] = (self.a**2/self.h) * self.norm[c][j] * r #number of event per each delta theta per each electron times 10^{-35}
 
-            for k,c in enumerate (components[:-1]):
-                self.pred_bo[i][k] = BorexinoTotalEventPrediction(self.dr_dldt[i][c],self.t_e[c],self.time,self.year,self.det_bo,self.theta)
-            
-            self.pred_su[i] = SuperkTotalEventPrediction(self.data_su,self.borom_unoscilated,self.dr_dldt[i]['B8'][0],self.t_e['B8'][0],365.*self.time,self.year,self.theta,self.det_su,self.res)
-        return Chi2(self.pred_bo, self.pred_su, self.data_bo, self.data_su, self.f, self.delta, self.m12, self.m12_bar, self.sig_m12)
+        return self.dr_dldt
+
+
+        Chi2(self.pred_bo, self.pred_su, self.data_bo, self.data_su, self.f, self.delta, self.m12, self.m12_bar, self.sig_m12)
+self.dr_dldt[i][c],self.t_e[c],self.time,self.year,self.det_bo,self.theta
 
 def SunEarthDistance(resolution=0.08):
     a     = (1.521e11 + 1.471e11)/2  #L = 1.5e11 meter 
@@ -243,17 +224,19 @@ def SurvivalProbablity(phi, enu, n_e, f_c, hbarc, param, ls):
     return pel, psl
 
 
-def BorexinoTotalEventPrediction(rlt,t,time,year,detector,theta): 
+def BorexinoTotalEventPrediction(rlt,t,year,theta):
+    #Borexino : per 100 ton :  3.307 \times 10^{31}
+    detector  =  24. * 6. * 6. * 0.03307  #number of target per 100 ton per day times 10^{35}
     num_event = 0
     for i in range(len(t)):
-        rt = (time/year) * detector * np.trapz(rlt[i],theta,axis=0)
+        rt =  (detector/year) * np.trapz(rlt[i],theta,axis=0)
         num_event = num_event + np.trapz(rt,t[i])
     return num_event
     
 
-def BoromUnoscilated(t,e,sp,g,m_e,uppt,data,res):
+def BoromUnoscilated(t,e,sp,g,m_e,uppt,len_data_su,res):
     r = np.zeros(t.shape)
-    num_event = np.zeros(data.shape[0])
+    num_event = np.zeros(len_data_su)
     k = 0
     for z,ts in enumerate(t):
         if z<=uppt:
@@ -264,15 +247,27 @@ def BoromUnoscilated(t,e,sp,g,m_e,uppt,data,res):
             r[z] = np.trapz(sp[k:]*cse,e[k:])
             k      = k + 1
             
-    for i in range(data.shape[0]):
+    for i in range(len_data_su):
         num_event[i] = np.trapz(r*res[i],t)
     return num_event
 
-def SuperkTotalEventPrediction(data_su,b8_un,dr_dldt,t,time,year,theta,detector,res):
-    num_event = np.zeros((theta.shape[0],data_su.shape[0]))
-    for i in range(data_su.shape[0]):
-        num_event[:,i] = (time/year) * (detector/b8_un[i]) * np.trapz(dr_dldt*res[i],t,axis=1)
-    return np.trapz(num_event,theta,axis=0)
+def SuperkTotalEventPrediction(dr_dldt,t,year,theta,detector,b8_un,res):
+    num_event = np.zeros((theta.shape[0],b8_un.shape[0]))
+    for i in range(b8_un.shape[0]):
+        num_event[:,i] = (detector/b8_un[i]) * np.trapz(dr_dldt*res[i],t,axis=1)
+    return np.trapz(num_event,theta,axis=0)/year
+    
+def AveragedPerdiction(dr_dldt,t_e,year,theta,det_su,b8_un,res,components):
+    len_m12 = len(dr_dldt)
+    pred_bo = np.zeros((len_m12,3))
+    pred_su = np.zeros((len_m12,b8_un.shape[0]))
+    for i in range(len_m12):
+        #Borexino
+        for k,c in enumerate ([components[:-1]]):
+            pred_bo[i,k] = BorexinoTotalEventPrediction(dr_dldt[i][c],t_e[c],year,theta)
+        #SuperKamiokande
+        self.pred_su[i] = SuperkTotalEventPrediction(dr_dldt[i]['B8'][0],t_e['B8'][0],year,theta,det_su,b8_un,res)
+    return pred_bo,pred_su
     
 def Chi2(pred_bo,pred_su,data_bo,data_su,f,delta,m12,m12_bar,sig_m12):
     #Flux normalization uncertainties taking from solar standard model prediction  
