@@ -40,9 +40,9 @@ def AnnualVariation(frame,mumi,borexino_prediction=False):
     else:
         return np.array([sorted_day,r_day - r_ave])
 
-def ResBo(t_e, n_th = 150):
+def ResBo(t_e, n_thl = 150, n_thu = 428):
     #the thresholds are coresponding to DOI:10.1016/j.astropartphys.2022.102778
-    n     = np.arange(n_th,428,1)
+    n     = np.arange(n_thl,n_thu,1)
     #Based on doi:10.1007/JHEP07(2022)138 [arXiv:2204.03011 [hep-ph]]
     nb    = -8.065244 + 493.2560*t_e - 64.09629*t_e**2 + 4.146102*t_e**3
     sigma = 1.21974 + 1.31394*np.sqrt(nb) - 0.0148585*nb

@@ -184,6 +184,18 @@ def ResSu(data, t_e):
             a    = (1/(np.sqrt(2*np.pi)*sig))*np.exp(-0.5*(t-e_nu)**2/sig**2)
             r[j,i] = np.trapz(a,e_nu)
     return r
+    
+    
+def ResBo(t_e, n_thl = 150, n_thu = 428):
+    #the thresholds are coresponding to DOI:10.1016/j.astropartphys.2022.102778
+    n     = np.arange(n_thl,n_thu,1)
+    #Based on doi:10.1007/JHEP07(2022)138 [arXiv:2204.03011 [hep-ph]]
+    nb    = -8.065244 + 493.2560*t_e - 64.09629*t_e**2 + 4.146102*t_e**3
+    sigma = 1.21974 + 1.31394*np.sqrt(nb) - 0.0148585*nb
+    rt    = np.zeros((len(n),len(t_e)))
+    for i in range(len(t_e)):
+        rt[:,i]     = (1/(sigma[i]*np.sqrt(2*np.pi)))*np.exp(-0.5*((n-nb[i])/sigma[i])**2)
+    return rt
 
 def SurvivalProbablity(phi, enu, n_e, f_c, hbarc, param, ls): 
     pel   = np.zeros((ls.shape[0],enu.shape[0]))
@@ -256,11 +268,19 @@ def AveragedPerdiction(dr_dldt,t_e,year,theta,det_su,b8_un,res,components):
     pred_bo = np.zeros((len_m12,3))
     pred_su = np.zeros((len_m12,b8_un.shape[0]))
     for i in range(len_m12):
-        print(i)
         #Borexino
         for k,c in enumerate (components[:-1]):
-            print(k,c)
             pred_bo[i,k] = BorexinoTotalEventPrediction(dr_dldt[i][c],t_e[c],year,theta)
         #SuperKamiokande
         pred_su[i] = SuperkTotalEventPrediction(dr_dldt[i]['B8'][0],t_e['B8'][0],year,theta,det_su,b8_un,res)
     return pred_bo,pred_su
+    
+    
+def BorexinoRecoilSpectrum(dr_dldt,t_e,year,theta):
+    #Borexino : per 100 ton :  3.307 \times 10^{31}
+    detector  =  24. * 6. * 6. * 0.03307  #number of target per 100 ton per day times 10^{35}
+    dr_dt = (detector/year) * np.trapz(dr_dldt,theta, axis=0)
+    #number of event per day per 100 ton
+    cond = t_e>0.02
+    res  = ResBo(t_e[cond], n_thl = 90, n_thu = 950)
+    return np.trapz(res*dr_dt[cond],t_e[cond])
