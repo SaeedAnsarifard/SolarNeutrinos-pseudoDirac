@@ -124,12 +124,7 @@ class FrameWork(object):
                             r[:,z] = np.trapz(sp[k:]*(cse*pee[c][j][:,k:]+csmu*(1-pee[c][j][:,k:]-pes[c][j][:,k:])),e[k:],axis=1)
                             k      = k + 1
                     self.dr_dldt[i][c][j] = (self.a**2/self.h) * self.norm[c][j] * r #number of event per each delta theta per each electron times 10^{-35}
-
         return self.dr_dldt
-
-
-        Chi2(self.pred_bo, self.pred_su, self.data_bo, self.data_su, self.f, self.delta, self.m12, self.m12_bar, self.sig_m12)
-self.dr_dldt[i][c],self.t_e[c],self.time,self.year,self.det_bo,self.theta
 
 def SunEarthDistance(resolution=0.08):
     a     = (1.521e11 + 1.471e11)/2  #L = 1.5e11 meter 
@@ -223,17 +218,6 @@ def SurvivalProbablity(phi, enu, n_e, f_c, hbarc, param, ls):
 
     return pel, psl
 
-
-def BorexinoTotalEventPrediction(rlt,t,year,theta):
-    #Borexino : per 100 ton :  3.307 \times 10^{31}
-    detector  =  24. * 6. * 6. * 0.03307  #number of target per 100 ton per day times 10^{35}
-    num_event = 0
-    for i in range(len(t)):
-        rt =  (detector/year) * np.trapz(rlt[i],theta,axis=0)
-        num_event = num_event + np.trapz(rt,t[i])
-    return num_event
-    
-
 def BoromUnoscilated(t,e,sp,g,m_e,uppt,len_data_su,res):
     r = np.zeros(t.shape)
     num_event = np.zeros(len_data_su)
@@ -250,6 +234,16 @@ def BoromUnoscilated(t,e,sp,g,m_e,uppt,len_data_su,res):
     for i in range(len_data_su):
         num_event[i] = np.trapz(r*res[i],t)
     return num_event
+    
+def BorexinoTotalEventPrediction(rlt,t,year,theta):
+    #Borexino : per 100 ton :  3.307 \times 10^{31}
+    detector  =  24. * 6. * 6. * 0.03307  #number of target per 100 ton per day times 10^{35}
+    num_event = 0
+    for i in range(len(t)):
+        rt =  (detector/year) * np.trapz(rlt[i],theta,axis=0)
+        num_event = num_event + np.trapz(rt,t[i])
+    return num_event
+    
 
 def SuperkTotalEventPrediction(dr_dldt,t,year,theta,detector,b8_un,res):
     num_event = np.zeros((theta.shape[0],b8_un.shape[0]))
@@ -262,43 +256,11 @@ def AveragedPerdiction(dr_dldt,t_e,year,theta,det_su,b8_un,res,components):
     pred_bo = np.zeros((len_m12,3))
     pred_su = np.zeros((len_m12,b8_un.shape[0]))
     for i in range(len_m12):
+        print(i)
         #Borexino
-        for k,c in enumerate ([components[:-1]]):
+        for k,c in enumerate (components[:-1]):
+            print(k,c)
             pred_bo[i,k] = BorexinoTotalEventPrediction(dr_dldt[i][c],t_e[c],year,theta)
         #SuperKamiokande
-        self.pred_su[i] = SuperkTotalEventPrediction(dr_dldt[i]['B8'][0],t_e['B8'][0],year,theta,det_su,b8_un,res)
+        pred_su[i] = SuperkTotalEventPrediction(dr_dldt[i]['B8'][0],t_e['B8'][0],year,theta,det_su,b8_un,res)
     return pred_bo,pred_su
-    
-def Chi2(pred_bo,pred_su,data_bo,data_su,f,delta,m12,m12_bar,sig_m12):
-    #Flux normalization uncertainties taking from solar standard model prediction  
-    sig_norm_bo = np.array([0.01,0.06,0.01])
-    sig_norm_su = 0.12
-    
-    d_bo = np.array([data_bo['pp']['R'],data_bo['Be7']['R'],data_bo['pep']['R']])
-    e_bo = np.array([data_bo['pp']['e'],data_bo['Be7']['e'],data_bo['pep']['e']])
-    d_su = data_su[:,2]
-    e_su = data_su[:,3]
-    
-    chi = np.zeros(m12.shape)
-    for i in range(m12.shape[0]):
-        min_norm_bo = (e_bo**2 + (d_bo*pred_bo[i]*sig_norm_bo**2))/(e_bo**2 + (pred_bo[i]**2*sig_norm_bo**2))
-
-        sig_frac = (sig_norm_su/e_su)**2
-        nominator= d_su*pred_su[i]*sig_frac
-        denominat= pred_su[i]**2*sig_frac
-
-        min_norm_su = (np.sum(f*nominator[np.newaxis,:],axis=1)+1)/(np.sum(f**2*denominat[np.newaxis,:],axis=1)+1)
-        chi_bo      = np.sum((d_bo - min_norm_bo*pred_bo[i])**2/e_bo**2 + (min_norm_bo - 1)**2/sig_norm_bo**2)
-        
-        
-        a = np.ones((f.shape[0],1))*d_su[np.newaxis,:] - f * (min_norm_su[:,np.newaxis] * pred_su[i,np.newaxis,:])
-        b = np.ones((f.shape[0],1))*e_su[np.newaxis,:]
-        
-        
-        chi_su = np.sum((a/b)**2,axis=1) + np.sum(delta**2,axis=1) 
-        
-        chi_su = chi_su + ((min_norm_su - 1)/sig_norm_su)**2
-
-        chi[i] = np.min(chi_su) + chi_bo + ((m12[i] - m12_bar)/sig_m12)**2 
-        
-    return np.min(chi)
