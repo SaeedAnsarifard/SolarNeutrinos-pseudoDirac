@@ -7,6 +7,11 @@ m_p    = 1.67 #proton mass :  1.67 \times 10^{-27} kg
 g      = hbarc * f_c
     
 class FrameWork(object):
+    #su_nbin is the number of electron recoil spectrum bins in the SuperKamiokande experiment (Max is 23)
+    #mumi stands for \Delta m_i^2 which is a Majorana mass splitting sourced by pseudo-Dirac scenario
+    #t12 stands for \theta_{12}
+    #m12 stands for \Delta m_{12}^2
+    #m12_nuisance whether be considered as a nuisance parameter around or fixed to the value of KamLAND
     def __init__(self, su_nbin=23, mumi = 'mum2', t12 = 33.4, m12=7.54e-5, m12_nuisance=True):
         #Nutrino Flux normalization :    Arxiv : 1611.09867 (HZ)
         self.norm  = {'pp' : [5.98],
