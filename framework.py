@@ -12,6 +12,7 @@ class FrameWork(object):
     #t12 stands for \theta_{12}
     #m12 stands for \Delta m_{12}^2
     #m12_nuisance whether be considered as a nuisance parameter around or fixed to the value of KamLAND
+    
     def __init__(self, su_nbin=23, mumi = 'mum2', t12 = 33.4, m12=7.54e-5, m12_nuisance=True):
         #Nutrino Flux normalization :    Arxiv : 1611.09867 (HZ)
         self.norm  = {'pp' : [5.98],
@@ -49,7 +50,8 @@ class FrameWork(object):
         #electron recoil energy in Mev
         self.uppt       = 100
         self.t_e        = {'pp'  : [IntegralLimit(spectrumpp[:,0],m_e,uppt=self.uppt)],
-                           'Be7' : [IntegralLimit(spectrumbe71[:,0],m_e),IntegralLimit(spectrumbe72[:,0],m_e,uppt=self.uppt)],
+                           'Be7' : [IntegralLimit(spectrumbe71[:,0],m_e,uppt=self.uppt),
+                                    IntegralLimit(spectrumbe72[:,0],m_e,uppt=self.uppt)],
                            'pep' : [IntegralLimit(spectrumpep[:,0],m_e,uppt=self.uppt)],
                            'B8'  : [IntegralLimit(spectrumB8[:,0],m_e,uppt=self.uppt)]}
         
@@ -236,29 +238,29 @@ def SurvivalProbablity(phi, enu, n_e, f_c, hbarc, param, ls):
     return pel, psl
 
 def BoromUnoscilated(t,e,sp,g,m_e,uppt,len_data_su,res):
-    r = np.zeros(t.shape)
+    r         = np.zeros(t.shape)
     num_event = np.zeros(len_data_su)
-    k = 0
+    k         = 0
     for z,ts in enumerate(t):
         if z<=uppt:
-            cse    = DCS(g,m_e,e,ts,1)
+            cse  = DCS(g,m_e,e,ts,1)
             r[z] = np.trapz(sp*cse,e)
         else:
-            cse    = DCS(g,m_e,e[k:],ts,1)
+            cse  = DCS(g,m_e,e[k:],ts,1)
             r[z] = np.trapz(sp[k:]*cse,e[k:])
-            k      = k + 1
+            k    = k + 1
             
     for i in range(len_data_su):
         num_event[i] = np.trapz(r*res[i],t)
     return num_event
     
-def BorexinoTotalEventPrediction(rlt,t,year,theta):
+def BorexinoTotalEventPrediction(dr_dldt,t,year,theta):
     #Borexino : per 100 ton :  3.307 \times 10^{31}
     detector  =  24. * 6. * 6. * 0.03307  #number of target per 100 ton per day times 10^{35}
     num_event = 0
     for i in range(len(t)):
-        rt =  (detector/year) * np.trapz(rlt[i],theta,axis=0)
-        num_event = num_event + np.trapz(rt,t[i])
+        dr_dt     =  (detector/year) * np.trapz(dr_dldt[i],theta,axis=0)
+        num_event = num_event + np.trapz(dr_dt,t[i])
     return num_event
     
 
@@ -283,9 +285,9 @@ def AveragedPerdiction(dr_dldt,t_e,year,theta,det_su,b8_un,res,components):
     
 def BorexinoRecoilSpectrum(dr_dldt,t_e,year,theta):
     #Borexino : per 100 ton :  3.307 \times 10^{31}
-    detector  =  24. * 6. * 6. * 0.03307  #number of target per 100 ton per day times 10^{35}
-    dr_dt = (detector/year) * np.trapz(dr_dldt,theta, axis=0)
+    detector =  24. * 6. * 6. * 0.03307  #number of target per 100 ton per day times 10^{35}
+    dr_dt    = (detector/year) * np.trapz(dr_dldt,theta, axis=0)
     #number of event per day per 100 ton
-    cond = t_e>0.02
+    cond = t_e>0.02 #Borexino thereshhold
     res  = ResBo(t_e[cond], n_thl = 90, n_thu = 950)
     return np.trapz(res*dr_dt[cond],t_e[cond])
