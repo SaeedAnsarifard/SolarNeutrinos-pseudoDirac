@@ -1,21 +1,26 @@
 import numpy as np
 from scipy.interpolate import interp1d
 
-from framework import SurvivalProbablity,SunEarthDistance
+from framework import SurvivalProbablity,SunEarthDistance,ResBo
 
 def AnnualVariation(frame,mumi,borexino_prediction=False):
-    frame.param[frame.mumi] = mumi
-    print(frame.param)
-    enu_be7                 = np.array([frame.e_nu['Be7'][1]])
-    t_be7                   = frame.t_e['Be7'][:,1]
-    resoluton_function      = ResBo(t_be7)
-    ecross_sec              = frame.cs['e']['Be7'][1]
-    mucros_sec              = frame.cs['mu/tau']['Be7'][1]
+    frame.resolution = 0.001
+    t    = t_e['Be7'][0]
+    cond = t>0.02 #Borexino thereshhold
+    res  = ResBo(t[cond])
+    dr_dldt  = frame[frame.param['T12'],mumi]]
+    dr_dldt  = dr_dldt[i]['Be7'][0]
     
-    l,a,theta,h             = SunEarthDistance(0.001)
-    sorted_l,sorted_theta,sorted_day = ThetatoDay(theta,l,h,a)
-    
-    be7_pee,be7_pes  = SurvivalProbablity(frame.phi['Be7'],enu_be7,frame.n_e,frame.f_c,frame.hbarc,frame.param,sorted_l)
+#    enu_be7                 = np.array([frame.e_nu['Be7'][1]])
+#    t_be7                   = frame.t_e['Be7'][:,1]
+#    resoluton_function      = ResBo(t_be7)
+#    ecross_sec              = frame.cs['e']['Be7'][1]
+#    mucros_sec              = frame.cs['mu/tau']['Be7'][1]
+#
+#    l,a,theta,h             = SunEarthDistance(0.001)
+#    sorted_l,sorted_theta,sorted_day = ThetatoDay(theta,l,h,a)
+#
+#    be7_pee,be7_pes  = SurvivalProbablity(frame.phi['Be7'],enu_be7,frame.n_e,frame.f_c,frame.hbarc,frame.param,sorted_l)
     
     rtbe7 = np.zeros(be7_pee.shape[0])
     for i in range(be7_pee.shape[0]):
@@ -39,18 +44,6 @@ def AnnualVariation(frame,mumi,borexino_prediction=False):
         return r_dataindex
     else:
         return np.array([sorted_day,r_day - r_ave])
-
-def ResBo(t_e, n_thl = 150, n_thu = 428):
-    #the thresholds are coresponding to DOI:10.1016/j.astropartphys.2022.102778
-    n     = np.arange(n_thl,n_thu,1)
-    #Based on doi:10.1007/JHEP07(2022)138 [arXiv:2204.03011 [hep-ph]]
-    nb    = -8.065244 + 493.2560*t_e - 64.09629*t_e**2 + 4.146102*t_e**3
-    sigma = 1.21974 + 1.31394*np.sqrt(nb) - 0.0148585*nb
-    rt    = np.zeros(len(t_e))
-    for i in range(len(t_e)):
-        r     = (1/(sigma[i]*np.sqrt(2*np.pi)))*np.exp(-0.5*((n-nb[i])/sigma[i])**2)
-        rt[i] = np.trapz(r,n)
-    return rt
 
 def ThetatoDay(theta,l,h,a):
     e      = (1.521e11 - 1.471e11)/(1.521e11 + 1.471e11)

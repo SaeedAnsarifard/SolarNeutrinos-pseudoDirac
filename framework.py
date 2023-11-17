@@ -65,9 +65,9 @@ class FrameWork(object):
         self.su_nbin  = su_nbin
         self.data_su  = np.loadtxt('./Data/B8_Data_2020.txt')[:self.su_nbin,:]
         
- 
-        self.l,self.a,self.theta,self.h   = SunEarthDistance()
-        self.year   = 60*60*24*365.25
+        self.resolution                 = 0.08
+        self.l,self.a,self.theta,self.h = SunEarthDistance(self.resolution)
+        self.year                       = 60*60*24*365.25
     
         #Super-k detector response function   
         self.res  = ResSu(self.data_su,self.t_e['B8'][0])
