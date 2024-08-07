@@ -65,6 +65,7 @@ class FrameWork(object):
         self.su_nbin  = su_nbin
         self.data_su  = np.loadtxt('./Data/B8_Data_2020.txt')[:self.su_nbin,:]
         
+        #geometric charactrestic : resolution of delta theta, theta is the angle between earth and sun
         self.resolution                 = 0.08
         self.l,self.a,self.theta,self.h = SunEarthDistance(self.resolution)
         self.year                       = 60*60*24*365.25
@@ -98,8 +99,9 @@ class FrameWork(object):
                         'M12' : m12 }
         
         #Unoscilated signal is produced to compare with the SuperKamiokande results. For more info see their papers!
-        #Super-K  : per Kton    :  (10/18) \times 10^{6}/m_p
-        self.det_su = self.year * 24. * 6. * 6. * (10/18) * 1/m_p #number of target per Kton times per year 10^{35}
+        #Super-K  : per kilo ton    :  (10/18) \times 10^{6}/m_p
+        self.det_su = self.year * 24. * 6. * 6. * (10/18) * 1/m_p #number of target in kilo ton in a year times 10^{35}
+        #B8 phi SNO : 5.25e \times 10^6 cm^2 s^-1
         self.borom_unoscilated = 2 * np.pi * (self.det_su/self.year) * 5.25e-4 * (self.a**2/self.h) * BoromUnoscilated(self.t_e['B8'][0],self.e_nu['B8'][0],self.spec['B8'][0],g,m_e,self.uppt,self.su_nbin,self.res)
         
         self.dr_dldt    = [{'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] } for i in range(self.m12.shape[0])]
@@ -130,7 +132,7 @@ class FrameWork(object):
                             csmu   = DCS(g,m_e,e[k:],ts,-1)
                             r[:,z] = np.trapz(sp[k:]*(cse*pee[c][j][:,k:]+csmu*(1-pee[c][j][:,k:]-pes[c][j][:,k:])),e[k:],axis=1)
                             k      = k + 1
-                    self.dr_dldt[i][c][j] = (self.a**2/self.h) * self.norm[c][j] * r #number of event per each delta theta per each electron times 10^{-35}
+                    self.dr_dldt[i][c][j] = (self.a**2/self.h) * self.norm[c][j] * r #number of event per each delta theta per electron recoil times 10^{-35}
         return self.dr_dldt
 
 def SunEarthDistance(resolution=0.08):
@@ -183,11 +185,12 @@ def DCS(g, m_e, e_nu, t_e, i=1):
     return  2 * g**2 * (m_e/np.pi) * (a1 + a2 - a3) * 10 #\times 10^{-45} in cm^2
 
 def ResSu(data, t_e):
+    #PhysRevD.109.092001
     r   = np.zeros((data.shape[0],t_e.shape[0]))
     for j in range (data.shape[0]):
         e_nu = np.linspace(data[j,0],data[j,1])
         for i,t in enumerate(t_e):
-            sig  = (-0.084+0.349*np.sqrt(t)+0.04*t)
+            sig  = (-0.05525+0.3162*np.sqrt(t)+0.04572*t)
             a    = (1/(np.sqrt(2*np.pi)*sig))*np.exp(-0.5*(t-e_nu)**2/sig**2)
             r[j,i] = np.trapz(a,e_nu)
     return r
@@ -270,10 +273,17 @@ def SuperkTotalEventPrediction(dr_dldt,t,year,theta,detector,b8_un,res):
         num_event[:,i] = (detector/b8_un[i]) * np.trapz(dr_dldt*res[i],t,axis=1)
     return np.trapz(num_event,theta,axis=0)/year
     
-def AveragedPerdiction(dr_dldt,t_e,year,theta,det_su,b8_un,res,components):
-    len_m12 = len(dr_dldt)
-    pred_bo = np.zeros((len_m12,3))
-    pred_su = np.zeros((len_m12,b8_un.shape[0]))
+def AveragedPerdiction(dr_dldt,frame):
+    t_e        = frame.t_e
+    year       = frame.year
+    theta      = frame.theta
+    det_su     = frame.det_su
+    b8_un      = frame.borom_unoscilated
+    res        = frame.res
+    components = frame.components
+    len_m12    = len(dr_dldt)
+    pred_bo    = np.zeros((len_m12,3))
+    pred_su    = np.zeros((len_m12,b8_un.shape[0]))
     for i in range(len_m12):
         #Borexino
         for k,c in enumerate (components[:-1]):
