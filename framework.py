@@ -258,7 +258,7 @@ def BoromUnoscilated(t,e,sp,g,m_e,uppt,len_data_su,res):
     for i in range(len_data_su):
         num_event[i] = np.trapz(r*res[i],t)
     return num_event,np.trapz(r,t)
-    
+#superK total
 def SuperkTotalEventPrediction(dr_dldt,frame):
     t        = frame.t_e['B8']
     year     = frame.year
