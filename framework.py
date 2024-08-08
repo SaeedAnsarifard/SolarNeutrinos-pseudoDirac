@@ -102,7 +102,7 @@ class FrameWork(object):
         #Super-K  : per kilo ton    :  (10/18) \times 10^{6}/m_p
         self.det_su = 365.25 * 24. * 6. * 6. * (10/18) * 1/m_p #number of target in kilo ton in a year times 10^{35}
         #B8 phi SNO : 5.25e \times 10^6 cm^2 s^-1
-        borom_spec,borom_total = BoromUnoscilated(self.t_e['B8'][0],self.e_nu['B8'][0],self.spec['B8'][0],g,m_e,self.uppt,self.su_nbin,self.res)
+        borom_spec,borom_total = BoromUnoscilated(self.t_e['B8'][0],self.e_nu['B8'][0],self.spec['B8'][0],g,m_e,self.uppt,self.data_su,self.res)
         self.borom_unoscilated = self.det_su * (2 * np.pi/self.year) * 5.25e-4 * (self.a**2/self.h) * borom_spec
         self.borom_unoscilated_total = self.det_su * (2 * np.pi/self.year) * 5.25e-4 * (self.a**2/self.h) * borom_total
         
@@ -242,9 +242,9 @@ def SurvivalProbablity(phi, enu, n_e, f_c, hbarc, param, ls):
 
     return pel, psl
 
-def BoromUnoscilated(t,e,sp,g,m_e,uppt,len_data_su,res):
+def BoromUnoscilated(t,e,sp,g,m_e,uppt,data_su,res):
     r         = np.zeros(t.shape)
-    num_event = np.zeros(len_data_su)
+    num_event = np.zeros(len(data_su))
     k         = 0
     for z,ts in enumerate(t):
         if z<=uppt:
@@ -255,19 +255,23 @@ def BoromUnoscilated(t,e,sp,g,m_e,uppt,len_data_su,res):
             r[z] = np.trapz(sp[k:]*cse,e[k:])
             k    = k + 1
             
-    for i in range(len_data_su):
+    for i in range(len(data_su)):
         num_event[i] = np.trapz(r*res[i],t)
-    return num_event,np.trapz(r,t)
-#superK total
+        
+    res_tot = ResSu(np.array([[data_su[0,0],data_su[-1,1]]]), t)
+    return num_event,np.trapz(r*res_tot[0],t)
+
 def SuperkTotalEventPrediction(dr_dldt,frame):
-    t        = frame.t_e['B8']
     year     = frame.year
     theta    = frame.theta
     detector = frame.det_su
-
-    num_event= np.zeros((theta.shape[0]))
-    num_event[:] = detector * np.trapz(dr_dldt,t,axis=1)
-    return np.trapz(num_event,theta,axis=0)/year
+    len_m12  = len(dr_dldt)
+    res = ResSu(np.array([[frame.data_su[0,0],frame.data_su[-1,1]]]), frame.t_e['B8'][0])
+    num_event= np.zeros((len_m12))
+    for i in range(len_m12):
+        dr_dl        =  detector * np.trapz(dr_dldt[i]['B8'][0]*res[0],frame.t_e['B8'][0],axis=1)
+        num_event[i] = np.trapz(dr_dl,theta,axis=0)/year
+    return num_event
     
 def BorexinoTotalEventPrediction(dr_dldt,t,year,theta):
     #Borexino : per 100 ton :  3.307 \times 10^{31}
