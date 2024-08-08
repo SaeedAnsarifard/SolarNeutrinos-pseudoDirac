@@ -100,9 +100,11 @@ class FrameWork(object):
         
         #Unoscilated signal is produced to compare with the SuperKamiokande results. For more info see their papers!
         #Super-K  : per kilo ton    :  (10/18) \times 10^{6}/m_p
-        self.det_su = self.year * 24. * 6. * 6. * (10/18) * 1/m_p #number of target in kilo ton in a year times 10^{35}
+        self.det_su = 365.25 * 24. * 6. * 6. * (10/18) * 1/m_p #number of target in kilo ton in a year times 10^{35}
         #B8 phi SNO : 5.25e \times 10^6 cm^2 s^-1
-        self.borom_unoscilated = 2 * np.pi * (self.det_su/self.year) * 5.25e-4 * (self.a**2/self.h) * BoromUnoscilated(self.t_e['B8'][0],self.e_nu['B8'][0],self.spec['B8'][0],g,m_e,self.uppt,self.su_nbin,self.res)
+        borom_spec,borom_total = BoromUnoscilated(self.t_e['B8'][0],self.e_nu['B8'][0],self.spec['B8'][0],g,m_e,self.uppt,self.su_nbin,self.res)
+        self.borom_unoscilated = self.det_su * (2 * np.pi/self.year) * 5.25e-4 * (self.a**2/self.h) * borom_spec
+        self.borom_unoscilated_total = self.det_su * (2 * np.pi/self.year) * 5.25e-4 * (self.a**2/self.h) * borom_total
         
         self.dr_dldt    = [{'pp' :[[]] , 'Be7' :[[],[]] , 'pep' :[[]] , 'B8' :[[]] } for i in range(self.m12.shape[0])]
         self.components = ['pp','Be7','pep','B8']
@@ -255,7 +257,17 @@ def BoromUnoscilated(t,e,sp,g,m_e,uppt,len_data_su,res):
             
     for i in range(len_data_su):
         num_event[i] = np.trapz(r*res[i],t)
-    return num_event
+    return num_event,np.trapz(r,t)
+    
+def SuperkTotalEventPrediction(dr_dldt,frame):
+    t        = frame.t_e['B8']
+    year     = frame.year
+    theta    = frame.theta
+    detector = frame.det_su
+
+    num_event= np.zeros((theta.shape[0]))
+    num_event[:] = detector * np.trapz(dr_dldt,t,axis=1)
+    return np.trapz(num_event,theta,axis=0)/year
     
 def BorexinoTotalEventPrediction(dr_dldt,t,year,theta):
     #Borexino : per 100 ton :  3.307 \times 10^{31}
@@ -266,13 +278,12 @@ def BorexinoTotalEventPrediction(dr_dldt,t,year,theta):
         num_event = num_event + np.trapz(dr_dt,t[i])
     return num_event
     
-
-def SuperkTotalEventPrediction(dr_dldt,t,year,theta,detector,b8_un,res):
+def SuperkSpectrumEventPrediction(dr_dldt,t,year,theta,detector,b8_un,res):
     num_event = np.zeros((theta.shape[0],b8_un.shape[0]))
     for i in range(b8_un.shape[0]):
         num_event[:,i] = (detector/b8_un[i]) * np.trapz(dr_dldt*res[i],t,axis=1)
     return np.trapz(num_event,theta,axis=0)/year
-    
+
 def AveragedPerdiction(dr_dldt,frame):
     t_e        = frame.t_e
     year       = frame.year
@@ -289,7 +300,7 @@ def AveragedPerdiction(dr_dldt,frame):
         for k,c in enumerate (components[:-1]):
             pred_bo[i,k] = BorexinoTotalEventPrediction(dr_dldt[i][c],t_e[c],year,theta)
         #SuperKamiokande
-        pred_su[i] = SuperkTotalEventPrediction(dr_dldt[i]['B8'][0],t_e['B8'][0],year,theta,det_su,b8_un,res)
+        pred_su[i] = SuperkSpectrumEventPrediction(dr_dldt[i]['B8'][0],t_e['B8'][0],year,theta,det_su,b8_un,res)
     return pred_bo,pred_su
     
     
