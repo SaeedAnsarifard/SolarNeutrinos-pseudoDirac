@@ -99,7 +99,7 @@ class FrameWork(object):
                         'M12' : m12 }
         
         #Unoscilated signal is produced to compare with the SuperKamiokande results. For more info see their papers!
-        #Super-K  : per kilo ton    :  (10/18) \times 10^{6}/m_p
+        #Super-K  : number of target per kilo ton    :  (10/18) \times 10^{6}/m_p -> 3.3 \times 10^{32} 
         self.det_su = 365.25 * 24. * 6. * 6. * (10/18) * 1/m_p #number of target in kilo ton in a year times 10^{35}
         #B8 phi SNO : 5.25e \times 10^6 cm^2 s^-1
         borom_spec,borom_total = BoromUnoscilated(self.t_e['B8'][0],self.e_nu['B8'][0],self.spec['B8'][0],g,m_e,self.uppt,self.data_su,self.res)
@@ -274,7 +274,7 @@ def SuperkTotalEventPrediction(dr_dldt,frame):
     return num_event
     
 def BorexinoTotalEventPrediction(dr_dldt,t,year,theta):
-    #Borexino : per 100 ton :  3.307 \times 10^{31}
+    #Borexino : number of target per 100 ton :  3.307 \times 10^{31}
     detector  =  24. * 6. * 6. * 0.03307  #number of target per 100 ton per day times 10^{35}
     num_event = 0
     for i in range(len(t)):
